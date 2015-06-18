@@ -9,7 +9,7 @@ public class DriveMain {
 
 		
 		//init
-		GoogleAuth auth = new GoogleAuth();
+		
 	}
 
 }
