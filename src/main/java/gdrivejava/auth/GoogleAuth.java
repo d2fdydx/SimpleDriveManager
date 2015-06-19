@@ -27,7 +27,7 @@ public class GoogleAuth{
 
     /** Directory to store user credentials. */
     private static final java.io.File DATA_STORE_DIR = new java.io.File(
-        System.getProperty("user.home"), ".credentials/drive-api-quickstart");
+        System.getProperty("user.home"), ".credentials/gdrivejava");
 
     /** Global instance of the {@link FileDataStoreFactory}. */
     private static FileDataStoreFactory DATA_STORE_FACTORY;
@@ -91,25 +91,6 @@ public class GoogleAuth{
                 .setApplicationName(APPLICATION_NAME)
                 .build();
     }
-/*
-    public static void main(String[] args) throws IOException {
-        // Build a new authorized API client service.
-        Drive service = getDriveService();
 
-        // Print the names and IDs for up to 10 files.
-        FileList result = service.files().list()
-             .setMaxResults(10)
-             .execute();
-        List<File> files = result.getItems();
-        if (files == null || files.size() == 0) {
-            System.out.println("No files found.");
-        } else {
-            System.out.println("Files:");
-            for (File file : files) {
-                System.out.printf("%s (%s)\n", file.getTitle(), file.getId());
-            }
-        }
-    }
-    */
 
 }
