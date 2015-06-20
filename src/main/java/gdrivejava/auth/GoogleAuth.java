@@ -41,7 +41,10 @@ public class GoogleAuth{
 
     /** Global instance of the scopes required by this quickstart. */
     private static final List<String> SCOPES =
-        Arrays.asList(DriveScopes.DRIVE_METADATA_READONLY);
+        Arrays.asList("https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file",
+                "https://www.googleapis.com/auth/drive.readonly", "https://www.googleapis.com/auth/drive.metadata.readonly",
+                "https://www.googleapis.com/auth/drive.appdata", "https://www.googleapis.com/auth/drive.apps.readonly",
+                "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/drive.scripts");
 
     static {
         try {
@@ -70,7 +73,7 @@ public class GoogleAuth{
                 new GoogleAuthorizationCodeFlow.Builder(
                         HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
                 .setDataStoreFactory(DATA_STORE_FACTORY)
-                .setAccessType("offline")
+                .setAccessType("offline").setApprovalPrompt("auto")
                 .build();
         Credential credential = new AuthorizationCodeInstalledApp(
             flow, new LocalServerReceiver()).authorize("user");
