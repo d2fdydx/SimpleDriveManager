@@ -3,6 +3,7 @@ package gdrivejava.google;
 import gdrivejava.auth.GoogleAuth;
 import gdrivejava.common.FileSystem;
 import gdrivejava.common.INode;
+import gdrivejava.event.listener.RemoteSyncEventListener;
 
 import java.io.IOException;
 import java.util.List;
@@ -12,10 +13,11 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.ParentReference;
 
-public class GoogleFileSystem implements FileSystem {
+public class GoogleFileSystem implements FileSystem<RemoteSyncEventListener> {
 	
 	Drive mDrive=null;
 	GoogleFileStore mStore =null;
+	RemoteSyncEventListener mListener=null;
 	public GoogleFileSystem() {
 		// TODO Auto-generated constructor stub
 		try {
@@ -45,6 +47,15 @@ public class GoogleFileSystem implements FileSystem {
 
 	public Drive getDrive() {
 		return mDrive;
+	}
+
+
+
+	@Override
+	public void addEventListener(RemoteSyncEventListener listener) {
+		// TODO Auto-generated method stub
+		mListener = listener; // only one listener only, actually
+		
 	}
 
 

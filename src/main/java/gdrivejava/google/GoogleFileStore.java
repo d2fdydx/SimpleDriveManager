@@ -1,12 +1,10 @@
 package gdrivejava.google;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Serializable;
-import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -15,6 +13,7 @@ import org.apache.commons.io.FileUtils;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.Drive.Files;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.ParentReference;
 
@@ -37,96 +36,146 @@ public class GoogleFileStore implements Serializable{
 			throw new Exception();
 		}
 		buildStore();
-		downloadFile();
+		//downloadFile();
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	public void downloadFile(){
 		String fileName ="Beginning AngularJS.pdf";
 		com.google.api.services.drive.model.File f  = mFiles.get(fileName);
-	///	String downloadUrl = f.getDownloadUrl();
+		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
 		File output = new File(LocationPath + fileName);
 		System.out.println(LocationPath+fileName);
 		if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 			try 
-		      {
-		        HttpResponse resp = mDrive.getRequestFactory().buildGetRequest		        		
-		                     (new GenericUrl(f.getDownloadUrl())).execute();
-		        InputStream in =resp.getContent();
-		        FileUtils.copyInputStreamToFile(in,output );
-		        
-		      }
-		      catch (IOException e) 
-		      {
-		        e.printStackTrace();
-		      }
-		    } else {
-		      // The file doesn't have any content stored on Drive.
-		    }
-		
-	
-		
-		
-	}
-	
-	
-	
-	void buildStore (){
-		  FileList result;
-			try {
-				result = mDrive.files().list()
-				     .setMaxResults(100)
-				     .execute();
-				List<com.google.api.services.drive.model.File> files = result.getItems();
-		        if (files == null || files.size() == 0) {
-		            System.out.println("No files found.");
-		        } else {
-		            System.out.println("Files:");
-		            for (com.google.api.services.drive.model.File file : files) {
-		                System.out.printf("%s (%s)\n", file.getTitle(), file.getId());
-		               // 	System.out.println("download "+file.getDownloadUrl());
-		               	mFiles.put(file.getTitle(),file);
-		                for (ParentReference parent : file.getParents()){
-		                	System.out.printf("---parents: %s\n",parent.getId());
-		                }
-		            }
-		        }
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+			{
+				HttpResponse resp = mDrive.getRequestFactory().buildGetRequest		        		
+						(new GenericUrl(f.getDownloadUrl())).execute();
+				InputStream in =resp.getContent();
+				FileUtils.copyInputStreamToFile(in,output );
+
+			}
+			catch (IOException e) 
+			{
 				e.printStackTrace();
 			}
-	        
-			
-		
+		} else {
+			// The file doesn't have any content stored on Drive.
+		}
+
+
+
+
 	}
 
-	
-	
-	
-	
-	
-	
+
+
+	void buildStore (){
+
+		try {
+			//mProxy.getAllRemoteFiles();
+			mProxy.getAllRemoteDirs();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+
+
+
+	}
+
+
+
+
+
+
+
 	class GoogleProxy{
-		
-		
-		public File downFile(URL url , String path){
-			File file = new File(LocationPath + path);
-			try {
-				FileUtils.copyURLToFile(url, file);
-				System.out.println("downloaded");
-				return file;
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return null;
+
+
+		public boolean downFile(String fileName, String Path) throws IOException{
+			com.google.api.services.drive.model.File f  = mFiles.get(fileName);
+			///	String downloadUrl = f.getDownloadUrl();
+			String surl = f.getDownloadUrl();
+			File output = new File(LocationPath + fileName);
+			System.out.println(LocationPath+fileName);
+			if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
+
+
+				HttpResponse resp = mDrive.getRequestFactory().buildGetRequest		        		
+						(new GenericUrl(f.getDownloadUrl())).execute();
+				InputStream in =resp.getContent();
+				FileUtils.copyInputStreamToFile(in,output );
+
+				return true;
+
+
+
+			} else {
+				// The file doesn't have any content stored on Drive.
+				return false;
 			}
-			
-			
+
 		}
-		
+
+
+		public List<com.google.api.services.drive.model.File>  getAllRemoteFiles() throws IOException{
+
+			List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
+			//System.out.println(mDrive.files().list().getQ());
+			Files.List request = mDrive.files().list().setQ("trashed=false and mimeType != 'application/vnd.google-apps.folder'");
+
+			do {
+
+				FileList files = request.execute();
+
+				result.addAll(files.getItems());
+				request.setPageToken(files.getNextPageToken());
+
+
+
+			} while (request.getPageToken() != null &&
+					request.getPageToken().length() > 0);
+
+			for (com.google.api.services.drive.model.File f : result){
+				System.out.println(f.getTitle());
+			}
+
+			return result;
+
+
+
+		}
+
+
+		public List<com.google.api.services.drive.model.File>  getAllRemoteDirs() throws IOException{
+			List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
+			//System.out.println(mDrive.files().list().getQ());
+			Files.List request = mDrive.files().list().setQ("trashed=false and mimeType = 'application/vnd.google-apps.folder'");
+
+			do {
+
+				FileList files = request.execute();
+
+				result.addAll(files.getItems());
+				request.setPageToken(files.getNextPageToken());
+
+
+
+			} while (request.getPageToken() != null &&
+					request.getPageToken().length() > 0);
+
+			for (com.google.api.services.drive.model.File f : result){
+				System.out.println(f.getTitle());
+			}
+
+			return result;
+
+
+		}
 	}
 }
