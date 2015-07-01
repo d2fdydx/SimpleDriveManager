@@ -1,5 +1,8 @@
 package gdrivejava.google;
 
+import gdrivejava.common.INode;
+import gdrivejava.common.INodeWalker;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,12 +26,16 @@ public class GoogleFileStore implements Serializable{
 
 	public String LocationPath = System.getProperty("user.home") + "/driveTest/";
 	HashMap<String, com.google.api.services.drive.model.File> mFiles = null; // need to be changed
+	HashMap<String, INode> nodesMap = null;
+	INode rootNode =null;
+	
 	GoogleProxy mProxy = new GoogleProxy();
 	Drive mDrive = null;
 	GoogleFileSystem mGFS = null;
 	public GoogleFileStore(GoogleFileSystem fs) throws Exception {
 		// TODO Auto-generated constructor stub
 		mFiles = new HashMap<String, com.google.api.services.drive.model.File>();
+		nodesMap = new HashMap<String, INode>();
 		mGFS = fs;
 		mDrive = mGFS.getDrive();
 		if (mDrive ==null || mGFS==null){
@@ -143,8 +150,10 @@ public class GoogleFileStore implements Serializable{
 
 			for (com.google.api.services.drive.model.File f : result){
 				System.out.println(f.getTitle());
+				
 			}
 
+		
 			return result;
 
 
@@ -171,8 +180,44 @@ public class GoogleFileStore implements Serializable{
 
 			for (com.google.api.services.drive.model.File f : result){
 				System.out.println(f.getTitle());
+				mFiles.put(f.getId(),f);
+				
 			}
 
+			for (com.google.api.services.drive.model.File f : result){
+				ParentReference parent = f.getParents().get(0);
+				INode node ;
+				if (nodesMap.containsKey(f.getId())){
+					node = nodesMap.get(f.getId());
+				}else{
+					node = new INode(f);
+					node.setDir(true);
+					nodesMap.put(node.getId(), node);
+				}
+				
+				INode parNode;
+				if (nodesMap.containsKey(parent.getId())){
+					parNode = nodesMap.get(parent.getId());
+					
+				}else {
+					parNode = new INode();
+					parNode.setDir(true);
+					parNode.setFile(mFiles.get(parent.getId()));
+					nodesMap.put(parent.getId(),parNode);	
+				}
+				if (parent.getIsRoot()){
+					System.out.println("find root");
+					System.out.println(parent.getId());
+					parNode.setRoot(true);
+					rootNode=parNode;
+				}
+				node.setParent(parNode);
+				parNode.addChild(node);
+			}
+			
+			INodeWalker walker = new INodeWalker();
+			walker.printStructure(rootNode);
+			
 			return result;
 
 

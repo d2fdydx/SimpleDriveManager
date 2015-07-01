@@ -2,7 +2,7 @@ package gdrivejava.event.listener;
 
 import gdrivejava.event.RemoteSyncEvent;
 
-public interface RemoteSyncEventListener {
+public interface RemoteSyncEventListener extends SyncEventListener<RemoteSyncEvent>{
 
-	void handleRemoteSync (RemoteSyncEvent e);
+	
 }

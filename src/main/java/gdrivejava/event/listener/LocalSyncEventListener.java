@@ -2,7 +2,7 @@ package gdrivejava.event.listener;
 
 import gdrivejava.event.LocalSyncEvent;
 
-public interface LocalSyncEventListener {
+public interface LocalSyncEventListener extends SyncEventListener<LocalSyncEvent>{
 
-	void handleLocalSync(LocalSyncEvent e);
+
 }

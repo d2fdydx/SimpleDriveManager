@@ -7,7 +7,7 @@ import gdrivejava.event.listener.LocalSyncEventListener;
 import gdrivejava.event.listener.RemoteSyncEventListener;
 import gdrivejava.google.GoogleFileSystem;
 
-public class DriveMain implements RemoteSyncEventListener, LocalSyncEventListener{
+public class DriveMain {
 
 	static FileSystem sGoogleFS;
 	static DriveMain sMain=null;
@@ -21,23 +21,20 @@ public class DriveMain implements RemoteSyncEventListener, LocalSyncEventListene
 		// TODO Auto-generated method stub
 		sMain = new DriveMain();
 		sGoogleFS = new GoogleFileSystem();
-		sGoogleFS.addEventListener(sMain);
+		sGoogleFS.addEventListener(new RemoteSyncEventListener() {
+			
+			@Override
+			public void handle(RemoteSyncEvent event) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
 		
 		
 		
 	}
 	
 	
-	//================
-	@Override
-	public void handleLocalSync(LocalSyncEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public void handleRemoteSync(RemoteSyncEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
+	
 
 }

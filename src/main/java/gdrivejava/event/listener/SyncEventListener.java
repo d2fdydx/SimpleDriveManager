@@ -1,5 +1,7 @@
 package gdrivejava.event.listener;
 
-public interface SyncEventListener {
+import gdrivejava.event.SyncEvent;
 
+public interface SyncEventListener<T extends SyncEvent> {
+	void handle (T event);
 }

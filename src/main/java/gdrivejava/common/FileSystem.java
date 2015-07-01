@@ -1,8 +1,10 @@
 package gdrivejava.common;
 
+import gdrivejava.event.listener.SyncEventListener;
+
 import java.util.List;
 
-public interface FileSystem <Listener>{
+public interface FileSystem <Listener extends SyncEventListener<?>>{
 
 	
 
