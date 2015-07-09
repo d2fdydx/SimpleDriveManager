@@ -2,6 +2,7 @@ package gdrivejava.google;
 
 import gdrivejava.common.INode;
 import gdrivejava.common.INodeWalker;
+import gdrivejava.main.DriveMain;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,14 +25,22 @@ import com.google.api.services.drive.model.ParentReference;
 
 public class GoogleFileStore implements Serializable{
 
-	public String LocationPath = System.getProperty("user.home") + "/driveTest/";
+	
 	HashMap<String, com.google.api.services.drive.model.File> mFiles = null; // need to be changed
-	HashMap<String, INode> nodesMap = null;
+	HashMap<String, INode> nodesMap = null; // id, Inode
+	HashMap<String, INode> pathMap =null;
 	INode rootNode =null;
 	
-	GoogleProxy mProxy = new GoogleProxy();
-	Drive mDrive = null;
-	GoogleFileSystem mGFS = null;
+	
+	
+	transient GoogleProxy mProxy = new GoogleProxy();
+	transient Drive mDrive = null;
+	transient GoogleFileSystem mGFS = null;
+	
+	
+	
+	
+	
 	public GoogleFileStore(GoogleFileSystem fs) throws Exception {
 		// TODO Auto-generated constructor stub
 		mFiles = new HashMap<String, com.google.api.services.drive.model.File>();
@@ -50,13 +59,29 @@ public class GoogleFileStore implements Serializable{
 
 
 
+	public HashMap<String, INode> getPathMap() {
+		return pathMap;
+	}
+
+
+
+
+
+	public void setPathMap(HashMap<String, INode> pathMap) {
+		this.pathMap = pathMap;
+	}
+
+
+
+
+
 	public void downloadFile(){
 		String fileName ="Beginning AngularJS.pdf";
 		com.google.api.services.drive.model.File f  = mFiles.get(fileName);
 		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
-		File output = new File(LocationPath + fileName);
-		System.out.println(LocationPath+fileName);
+		File output = new File(DriveMain.LocationPath + fileName);
+		System.out.println(DriveMain.LocationPath+fileName);
 		if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 			try 
 			{
@@ -84,8 +109,13 @@ public class GoogleFileStore implements Serializable{
 	void buildStore (){
 
 		try {
-			//mProxy.getAllRemoteFiles();
+		
 			mProxy.getAllRemoteDirs();
+			mProxy.getAllRemoteFiles();
+			for(String id : nodesMap.keySet()){
+				INode temp = nodesMap.get(id);
+				pathMap.put(temp.getFullPathName(),temp);
+			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -108,8 +138,8 @@ public class GoogleFileStore implements Serializable{
 			com.google.api.services.drive.model.File f  = mFiles.get(fileName);
 			///	String downloadUrl = f.getDownloadUrl();
 			String surl = f.getDownloadUrl();
-			File output = new File(LocationPath + fileName);
-			System.out.println(LocationPath+fileName);
+			File output = new File(DriveMain.LocationPath + fileName);
+			System.out.println(DriveMain.LocationPath+fileName);
 			if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 
 
@@ -147,9 +177,43 @@ public class GoogleFileStore implements Serializable{
 
 			} while (request.getPageToken() != null &&
 					request.getPageToken().length() > 0);
+			
+			for (com.google.api.services.drive.model.File f : result){
+				mFiles.put(f.getId(),f);
+			
+			}
 
 			for (com.google.api.services.drive.model.File f : result){
-				System.out.println(f.getTitle());
+				List<ParentReference> tpr = f.getParents();
+				if(tpr==null||tpr.size()==0){
+					System.out.println(f.getId());
+					System.out.println(rootNode.getId());
+					continue;
+				}
+				ParentReference parent = f.getParents().get(0);
+				INode node ;
+				if (nodesMap.containsKey(f.getId())){
+					node = nodesMap.get(f.getId());
+					node.setRemoteFile(f);
+				}else{
+					node = new INode(f);
+					nodesMap.put(f.getId(), node);
+				}
+				node.setId(f.getId());
+				
+				INode parNode=null;
+				if (nodesMap.containsKey(parent.getId())){
+					parNode = nodesMap.get(parent.getId());
+					
+				}else {
+					parNode = new INode();
+					parNode.setRemoteFile(mFiles.get(parent.getId()));
+					nodesMap.put(parent.getId(),parNode);	
+				}
+			
+				node.setParent(parNode);
+				parNode.addChild(node);
+				parNode.setId(parent.getId());
 				
 			}
 
@@ -179,7 +243,7 @@ public class GoogleFileStore implements Serializable{
 					request.getPageToken().length() > 0);
 
 			for (com.google.api.services.drive.model.File f : result){
-				System.out.println(f.getTitle());
+				//System.out.println(f.getTitle());
 				mFiles.put(f.getId(),f);
 				
 			}
@@ -192,9 +256,9 @@ public class GoogleFileStore implements Serializable{
 				}else{
 					node = new INode(f);
 					node.setDir(true);
-					nodesMap.put(node.getId(), node);
+					nodesMap.put(f.getId(), node);
 				}
-				
+				node.setId(f.getId());
 				INode parNode;
 				if (nodesMap.containsKey(parent.getId())){
 					parNode = nodesMap.get(parent.getId());
@@ -202,21 +266,21 @@ public class GoogleFileStore implements Serializable{
 				}else {
 					parNode = new INode();
 					parNode.setDir(true);
-					parNode.setFile(mFiles.get(parent.getId()));
+					parNode.setRemoteFile(mFiles.get(parent.getId()));
 					nodesMap.put(parent.getId(),parNode);	
 				}
 				if (parent.getIsRoot()){
-					System.out.println("find root");
-					System.out.println(parent.getId());
+					//System.out.println("find root");
+					//System.out.println(parent.getId());
 					parNode.setRoot(true);
 					rootNode=parNode;
 				}
 				node.setParent(parNode);
 				parNode.addChild(node);
+				parNode.setId(parent.getId());
 			}
 			
-			INodeWalker walker = new INodeWalker();
-			walker.printStructure(rootNode);
+			
 			
 			return result;
 

@@ -7,6 +7,7 @@ import gdrivejava.event.listener.RemoteSyncEventListener;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
@@ -17,6 +18,7 @@ public class GoogleFileSystem implements FileSystem<RemoteSyncEventListener> {
 	
 	Drive mDrive=null;
 	GoogleFileStore mStore =null;
+	
 	RemoteSyncEventListener mListener=null;
 	public GoogleFileSystem() {
 		// TODO Auto-generated constructor stub
@@ -56,6 +58,14 @@ public class GoogleFileSystem implements FileSystem<RemoteSyncEventListener> {
 		// TODO Auto-generated method stub
 		mListener = listener; // only one listener only, actually
 		
+	}
+
+
+
+	@Override
+	public Map<String, INode> getFilesMap() {
+		// TODO Auto-generated method stub
+		return mStore.getPathMap();
 	}
 
 
