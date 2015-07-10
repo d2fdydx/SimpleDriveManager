@@ -13,6 +13,6 @@ public interface FileSystem <Listener extends SyncEventListener<?>>{
 	public Map<String , INode> getFilesMap();
 	public void addEventListener(Listener listener);
 	
-	//public void sync (File file, String path);
+	public void sync (String path,SyncAction action);
 	
 }

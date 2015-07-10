@@ -2,6 +2,7 @@ package gdrivejava.local;
 
 import gdrivejava.common.FileSystem;
 import gdrivejava.common.INode;
+import gdrivejava.common.SyncAction;
 import gdrivejava.event.listener.LocalSyncEventListener;
 import gdrivejava.main.DriveMain;
 
@@ -33,6 +34,12 @@ public class LocalFileSystem implements FileSystem<LocalSyncEventListener>{
 	public Map<String, INode> getFilesMap() {
 		// TODO Auto-generated method stub
 		return store.getNodeMap();
+	}
+
+	@Override
+	public void sync(String path, SyncAction action) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 

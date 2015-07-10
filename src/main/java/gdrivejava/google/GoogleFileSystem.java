@@ -3,6 +3,7 @@ package gdrivejava.google;
 import gdrivejava.auth.GoogleAuth;
 import gdrivejava.common.FileSystem;
 import gdrivejava.common.INode;
+import gdrivejava.common.SyncAction;
 import gdrivejava.event.listener.RemoteSyncEventListener;
 
 import java.io.IOException;
@@ -66,6 +67,16 @@ public class GoogleFileSystem implements FileSystem<RemoteSyncEventListener> {
 	public Map<String, INode> getFilesMap() {
 		// TODO Auto-generated method stub
 		return mStore.getPathMap();
+	}
+
+
+
+	@Override
+	public void sync(String path, SyncAction action) {
+		// TODO Auto-generated method stub
+		if (action == SyncAction.Pull){
+			mStore.downloadFile(path);
+		}
 	}
 
 

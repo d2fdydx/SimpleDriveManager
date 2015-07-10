@@ -1,10 +1,7 @@
 package gdrivejava.google;
 
-import gdrivejava.common.INode;
-import gdrivejava.common.INodeWalker;
-import gdrivejava.main.DriveMain;
-
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -12,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 
 import com.google.api.client.http.GenericUrl;
@@ -20,6 +18,9 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Files;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.ParentReference;
+
+import gdrivejava.common.INode;
+import gdrivejava.main.DriveMain;
 
 //import com.google.api.services.drive.model.File;
 
@@ -45,6 +46,7 @@ public class GoogleFileStore implements Serializable{
 		// TODO Auto-generated constructor stub
 		mFiles = new HashMap<String, com.google.api.services.drive.model.File>();
 		nodesMap = new HashMap<String, INode>();
+		pathMap= new HashMap<String, INode>();
 		mGFS = fs;
 		mDrive = mGFS.getDrive();
 		if (mDrive ==null || mGFS==null){
@@ -75,13 +77,13 @@ public class GoogleFileStore implements Serializable{
 
 
 
-	public void downloadFile(){
-		String fileName ="Beginning AngularJS.pdf";
-		com.google.api.services.drive.model.File f  = mFiles.get(fileName);
+	public void downloadFile(String path){
+		INode node =pathMap.get(path);
+		com.google.api.services.drive.model.File f  = node.getRemoteFile();
 		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
-		File output = new File(DriveMain.LocationPath + fileName);
-		System.out.println(DriveMain.LocationPath+fileName);
+		File output = new File(DriveMain.LocationPath + path);
+		System.out.println(DriveMain.LocationPath+path);
 		if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 			try 
 			{
@@ -89,7 +91,13 @@ public class GoogleFileStore implements Serializable{
 						(new GenericUrl(f.getDownloadUrl())).execute();
 				InputStream in =resp.getContent();
 				FileUtils.copyInputStreamToFile(in,output );
-
+				FileInputStream fis = new FileInputStream(output);
+				String md5 =DigestUtils.md5Hex(fis);
+				fis.close();
+			
+				System.out.println(md5);
+				System.out.println(node.getRemoteFile().getMd5Checksum());
+				System.out.println(path + "  downloaded");
 			}
 			catch (IOException e) 
 			{
