@@ -16,8 +16,8 @@ public class INode implements Serializable {
 	boolean dir =false;
 	File remoteFile =null;
 	java.io.File localFile =null;
-	
-	
+
+
 	public java.io.File getLocalFile() {
 		return localFile;
 	}
@@ -40,22 +40,33 @@ public class INode implements Serializable {
 		this.root = root;
 	}
 	public String getFullPathName() {
+
 		if (parent !=null){
-			if (localFile!=null){
-				return parent.getFullPathName()+"/"+localFile.getName();
-			}else if (remoteFile !=null){
-				return parent.getFullPathName()+"/"+remoteFile.getTitle();
+			if (!parent.isRoot()){
+				if (localFile!=null){
+					return parent.getFullPathName()+"/"+localFile.getName();
+				}else if (remoteFile !=null){
+					return parent.getFullPathName()+"/"+remoteFile.getTitle();
+				}
+				return parent.getFullPathName()+"/"+"noName";
+			}else{
+				if (localFile!=null){
+					return parent.getFullPathName()+localFile.getName();
+				}else if (remoteFile !=null){
+					return parent.getFullPathName()+remoteFile.getTitle();
+				}
+				return parent.getFullPathName()+"noName";
 			}
-			return parent.getFullPathName()+"/"+"noName";
+		
 		}
-		return "";
+		return "/";
 	}
 	public void setFullPathName(String fullPathName) {
 		this.fullPathName = fullPathName;
 	}
-	
-	
-	
+
+
+
 	public boolean isDir() {
 		return dir;
 	}
@@ -68,15 +79,15 @@ public class INode implements Serializable {
 	public void setParent(INode parent) {
 		this.parent = parent;
 	}
-	
+
 	public INode (){
-	
+
 	}
 	public INode (File f){
 		remoteFile = f;
 	}
 	public String getId() {
-		
+
 		return Id;
 	}
 

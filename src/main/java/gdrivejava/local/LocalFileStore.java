@@ -9,7 +9,8 @@ import java.util.HashMap;
 public class LocalFileStore {
 	
 	HashMap<String,INode> nodeMap = null;
-
+	LocalFileSystem fileFs =null;
+	
 	public HashMap<String, INode> getNodeMap() {
 		return nodeMap;
 	}
@@ -18,7 +19,8 @@ public class LocalFileStore {
 		this.nodeMap = nodeMap;
 	}
 
-	public LocalFileStore(){
+	public LocalFileStore(LocalFileSystem fs){
+		fileFs = fs;
 		nodeMap=new HashMap<String, INode>();
 		buildStore();
 	}
@@ -31,9 +33,10 @@ public class LocalFileStore {
 	public void indexAllFiles(File folder,INode parentNode) {
 		
 		if (parentNode == null){
+			//root
 			parentNode = new INode();
 			parentNode.setLocalFile(folder);
-			
+			parentNode.setRoot(true);
 			parentNode.setDir(true);
 			
 			System.out.println(parentNode.getFullPathName());

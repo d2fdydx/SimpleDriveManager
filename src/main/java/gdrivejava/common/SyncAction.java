@@ -2,5 +2,5 @@ package gdrivejava.common;
 
 public enum SyncAction {
 
-	Pull, Push
+	Pull, Push , Mkdir,Rm
 }

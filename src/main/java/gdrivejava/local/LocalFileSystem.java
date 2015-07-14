@@ -1,33 +1,34 @@
 package gdrivejava.local;
 
-import gdrivejava.common.FileSystem;
-import gdrivejava.common.INode;
-import gdrivejava.common.SyncAction;
-import gdrivejava.event.listener.LocalSyncEventListener;
-import gdrivejava.main.DriveMain;
-
-import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class LocalFileSystem implements FileSystem<LocalSyncEventListener>{
+import gdrivejava.common.AbstractFileSystem;
+import gdrivejava.common.INode;
+import gdrivejava.common.SyncAction;
+import gdrivejava.event.SyncEvent;
+
+public class LocalFileSystem extends AbstractFileSystem{
 
 	LocalFileStore store=null;
-	
-	@Override
-	public List<INode> listFiles() {
-		// TODO Auto-generated method stub
-		return null;
+	LocalFileSystem me=null;
+	String rootPath=null;
+
+
+
+	public String getRootPath() {
+		return rootPath;
 	}
 
-	@Override
-	public void addEventListener(LocalSyncEventListener listener) {
-		// TODO Auto-generated method stub
-		
+	public void setRootPath(String rootPath) {
+		this.rootPath = rootPath;
 	}
-	
+
 	public LocalFileSystem(){
-		store= new LocalFileStore();
+		super("Local FS");
+		me =this;
+		store= new LocalFileStore(this);
 	}
 
 	@Override
@@ -37,10 +38,50 @@ public class LocalFileSystem implements FileSystem<LocalSyncEventListener>{
 	}
 
 	@Override
-	public void sync(String path, SyncAction action) {
+	protected void sync(String path, SyncAction action) {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
+	@Override
+	protected Runnable getRunnable() {
+		// TODO Auto-generated method stub
+		return new Runnable() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				while (true){
+					//do event first
+					if (eventList.size()>0){
+						SyncEvent e = null;
+						synchronized(eventList){
+							e= eventList.remove(0);
+
+						}
+						sync(e.getPath(),e.getAction());
+
+						continue;
+					}
+
+					//
+
+					synchronized (me) {
+						try {
+							me.wait(5000l);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+
+				}
+
+
+			}
+		};
+
+	}
+
 
 }

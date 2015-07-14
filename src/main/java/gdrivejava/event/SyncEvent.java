@@ -1,46 +1,23 @@
 package gdrivejava.event;
 
 import gdrivejava.common.INode;
+import gdrivejava.common.SyncAction;
 
 public class SyncEvent {
-	boolean mDir;
-	String mPath;
-	String UUID;
-	INode node;
-	public boolean ismDir() {
-		return mDir;
-	}
-	public void setmDir(boolean mDir) {
-		this.mDir = mDir;
-	}
-	public String getmPath() {
-		return mPath;
-	}
-	public void setmPath(String mPath) {
-		this.mPath = mPath;
-	}
-	public INode getNode() {
-		return node;
-	}
-	public void setNode(INode node) {
-		this.node = node;
-	}
-	public boolean isDir() {
-		return mDir;
-	}
-	public void setDir(boolean dir) {
-		mDir = dir;
-	}
+
+	String path;
+	SyncAction action;
 	public String getPath() {
-		return mPath;
+		return path;
 	}
 	public void setPath(String path) {
-		mPath = path;
+		this.path = path;
 	}
-	public String getUUID() {
-		return UUID;
+	public SyncAction getAction() {
+		return action;
 	}
-	public void setUUID(String uUID) {
-		UUID = uUID;
+	public void setAction(SyncAction action) {
+		this.action = action;
 	}
+	
 }
