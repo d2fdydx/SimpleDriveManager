@@ -60,12 +60,16 @@ public class GoogleFileSystem extends AbstractFileSystem {
 	@Override
 	protected void sync(String path, SyncAction action) {
 		// TODO Auto-generated method stub
+		System.out.println("event:" + path  + " "+ action);
 		switch(action){
 		case Pull:
 			mStore.downloadFile(path);
 			break;
 		case Push:
 			mStore.uploadFile(path);
+			break;
+		case Update:
+			mStore.updateFile(path);
 			break;
 		}
 	}

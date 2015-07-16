@@ -1,9 +1,13 @@
 package gdrivejava.common;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.codec.digest.DigestUtils;
 
 import gdrivejava.event.SyncEvent;
 import gdrivejava.google.GoogleFileSystem;
@@ -41,20 +45,21 @@ public class Synchronizer {
 				List<SyncEvent> remoteEvents = new ArrayList<>();
 				List<SyncEvent> localEvents = new ArrayList<>();
 				//pull
-				for (String remoteId : remoteMap.keySet()){
+				for (String remotePath : remoteMap.keySet()){
 					//do sth
 
 
 
-					if(!localMap.containsKey(remoteId)){
-						INode remoteNode = remoteMap.get(remoteId);
+					if(!localMap.containsKey(remotePath)){
+						INode remoteNode = remoteMap.get(remotePath);
+						
 						if (!remoteNode.isDir()){
 							String tpath = remoteNode.getFullPathName();
 							System.out.println( remoteNode.getFullPathName());
 							SyncEvent e= new SyncEvent();
 							e.setAction(SyncAction.Pull);
 							e.setPath(tpath);
-						//	remoteEvents.add(e);
+							remoteEvents.add(e);
 
 							
 						}else{
@@ -64,7 +69,46 @@ public class Synchronizer {
 
 					}else{
 						 //check modified time .etc
-						
+						INode localNode = localMap.get(remotePath);
+						long localTime =localNode.getLocalFile().lastModified();
+						INode remoteNode = remoteMap.get(remotePath);
+						if (remoteNode.isDir())
+							continue;
+						long remoteTime = remoteNode.getRemoteFile().getModifiedDate().getValue();
+						if (remoteTime > localTime){ // remote newer?
+							try {
+							FileInputStream fis = new FileInputStream(localNode.getLocalFile());
+							
+								if (!remoteNode.getRemoteFile().getMd5Checksum().equals(DigestUtils.md5Hex(fis))){
+									//download
+									String tpath = remoteNode.getFullPathName();
+									SyncEvent e= new SyncEvent();
+									e.setAction(SyncAction.Pull);
+									e.setPath(tpath);
+									remoteEvents.add(e);
+								}
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}else{
+							try {
+								FileInputStream fis = new FileInputStream(localNode.getLocalFile());
+								
+									if (!remoteNode.getRemoteFile().getMd5Checksum().equals(DigestUtils.md5Hex(fis))){
+										//download
+										String tpath = remoteNode.getFullPathName();
+										SyncEvent e= new SyncEvent();
+										e.setAction(SyncAction.Update);
+										e.setPath(tpath);
+										remoteEvents.add(e);
+									}
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+						}
+					
 					}
 					
 					

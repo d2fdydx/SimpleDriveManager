@@ -36,8 +36,8 @@ public class GoogleFileStore implements Serializable{
 	final static String FOLDER_MIME="application/vnd.google-apps.folder";
 	final static String FILE_MIME="application/vnd.google-apps.file";
 	INode rootNode =null;
-
-
+	
+	
 
 	transient GoogleProxy mProxy = new GoogleProxy();
 	transient Drive mDrive = null;
@@ -126,6 +126,33 @@ public class GoogleFileStore implements Serializable{
 
 	}
 
+	// update file -> 
+	public void updateFile(String path){ 
+		//
+		File file =new File(this.mGFS.getRootPath()+path);
+		if (!file.exists()){
+			System.out.println(this.mGFS.getRootPath()+path + " not exists");
+		}else{
+			if (!file.isDirectory()){
+				INode remoteNode=  pathMap.get(path);
+				FileContent mediaContent = new FileContent(null, file);
+				try {
+					com.google.api.services.drive.model.File updatedFile = mDrive.files().update(remoteNode.getId(), remoteNode.getRemoteFile(),mediaContent).execute();
+					remoteNode.setRemoteFile(updatedFile);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+
+		}
+
+	}
+
+	
+	
+	
 	private  com.google.api.services.drive.model.File insertFile(Drive service, 
 			String parentId, String mimeType, File fileContent) {
 		// File's metadata.
@@ -164,7 +191,7 @@ public class GoogleFileStore implements Serializable{
 		}
 	}
 
-
+	
 
 
 
@@ -174,7 +201,7 @@ public class GoogleFileStore implements Serializable{
 		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
 		File output = new File(DriveMain.LocationPath + path);
-		System.out.println(DriveMain.LocationPath+path);
+		
 		if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 			try 
 			{
@@ -277,11 +304,13 @@ public class GoogleFileStore implements Serializable{
 					request.getPageToken().length() > 0);
 
 			for (com.google.api.services.drive.model.File f : result){
-				fileMap.put(f.getId(),f);
+				if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0){
+					fileMap.put(f.getId(),f);
+				}
 
 			}
 
-			for (com.google.api.services.drive.model.File f : result){
+			for (com.google.api.services.drive.model.File f : fileMap.values()){
 				List<ParentReference> tpr = f.getParents();
 				if(tpr==null||tpr.size()==0){
 					System.out.println(f.getId());
