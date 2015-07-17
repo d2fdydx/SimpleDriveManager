@@ -4,31 +4,26 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.api.services.drive.model.File;
-
-public class INode implements Serializable {
+public abstract class INode<E> implements Serializable {
 
 	String Id=null;
 	String fullPathName ="/";
-	List <INode> children =new ArrayList<INode>();
-	INode parent = null;
+	List <INode<E>> children =new ArrayList<INode<E>>();
+	INode<E> parent = null;
 	boolean root=false;
 	boolean dir =false;
-	File remoteFile =null;
-	java.io.File localFile =null;
+	E file=null;
 
-
-	public java.io.File getLocalFile() {
-		return localFile;
+	
+	protected abstract String getName();
+	
+	protected abstract long getModifiedTime();
+	protected abstract String getMd5CheckSum();
+	public E getFile() {
+		return file;
 	}
-	public void setLocalFile(java.io.File localFile) {
-		this.localFile = localFile;
-	}
-	public File getRemoteFile() {
-		return remoteFile;
-	}
-	public void setRemoteFile(File remoteFile) {
-		this.remoteFile = remoteFile;
+	public void setFile(E file) {
+		this.file = file;
 	}
 	public void setId(String id) {
 		Id = id;
@@ -43,17 +38,15 @@ public class INode implements Serializable {
 
 		if (parent !=null){
 			if (!parent.isRoot()){
-				if (localFile!=null){
-					return parent.getFullPathName()+"/"+localFile.getName();
-				}else if (remoteFile !=null){
-					return parent.getFullPathName()+"/"+remoteFile.getTitle();
+				
+				if (file !=null){
+					return parent.getFullPathName()+"/"+getName();
 				}
 				return parent.getFullPathName()+"/"+"noName";
 			}else{
-				if (localFile!=null){
-					return parent.getFullPathName()+localFile.getName();
-				}else if (remoteFile !=null){
-					return parent.getFullPathName()+remoteFile.getTitle();
+				
+				if (file!=null){
+					return parent.getFullPathName()+getName();
 				}
 				return parent.getFullPathName()+"noName";
 			}
@@ -61,9 +54,7 @@ public class INode implements Serializable {
 		}
 		return "/";
 	}
-	public void setFullPathName(String fullPathName) {
-		this.fullPathName = fullPathName;
-	}
+	
 
 
 
@@ -73,40 +64,32 @@ public class INode implements Serializable {
 	public void setDir(boolean dir) {
 		this.dir = dir;
 	}
-	public INode getParent() {
+	public INode<E> getParent() {
 		return parent;
 	}
-	public void setParent(INode parent) {
+	public void setParent(INode<E> parent) {
 		this.parent = parent;
 	}
 
 	public INode (){
 
 	}
-	public INode (File f){
-		remoteFile = f;
-	}
+	
 	public String getId() {
 
 		return Id;
 	}
 
 
-	public void addChild (INode n){
+	public void addChild (INode<E> n){
 		this.children.add(n);
 	}
-	public List<INode> getChildren() {
+	public List<INode<E>> getChildren() {
 		return children;
 	}
-	public void setChildren(List<INode> children) {
+	public void setChildren(List<INode<E>> children) {
 		this.children = children;
 	}
-	public String getName(){
-		if (remoteFile !=null)
-			return remoteFile.getTitle();
-		else if (root){
-			return "";
-		}else return "noName";
-	}
+	
 
 }

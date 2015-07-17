@@ -7,7 +7,7 @@ import java.util.List;
 import gdrivejava.event.SyncEvent;
 import gdrivejava.event.listener.SyncEventListener;
 
-public abstract class AbstractFileSystem implements FileSystem {
+public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 	
 	protected Thread thread =null;
 	protected List<SyncEvent> eventList = new LinkedList<>() ;

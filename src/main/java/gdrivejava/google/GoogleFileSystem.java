@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.File;
 
 import gdrivejava.auth.GoogleAuth;
 import gdrivejava.common.AbstractFileSystem;
@@ -11,7 +12,7 @@ import gdrivejava.common.INode;
 import gdrivejava.common.SyncAction;
 import gdrivejava.event.SyncEvent;
 
-public class GoogleFileSystem extends AbstractFileSystem {
+public class GoogleFileSystem extends AbstractFileSystem<File> {
 	
 	Drive mDrive=null;
 	GoogleFileStore mStore =null;
@@ -50,7 +51,7 @@ public class GoogleFileSystem extends AbstractFileSystem {
 
 
 	@Override
-	public Map<String, INode> getFilesMap() {
+	public Map<String, INode<File>> getFilesMap() {
 		// TODO Auto-generated method stub
 		return mStore.getPathMap();
 	}

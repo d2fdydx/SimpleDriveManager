@@ -8,20 +8,20 @@ import java.util.HashMap;
 
 public class LocalFileStore {
 	
-	HashMap<String,INode> nodeMap = null;
+	HashMap<String,INode<File>> nodeMap = null;
 	LocalFileSystem fileFs =null;
 	
-	public HashMap<String, INode> getNodeMap() {
+	public HashMap<String,INode<File>> getNodeMap() {
 		return nodeMap;
 	}
 
-	public void setNodeMap(HashMap<String, INode> nodeMap) {
+	public void setNodeMap(HashMap<String, INode<File>> nodeMap) {
 		this.nodeMap = nodeMap;
 	}
 
 	public LocalFileStore(LocalFileSystem fs){
 		fileFs = fs;
-		nodeMap=new HashMap<String, INode>();
+		nodeMap=new HashMap<String, INode<File>>();
 		buildStore();
 	}
 	
@@ -30,12 +30,12 @@ public class LocalFileStore {
 		indexAllFiles(rootfile,null);
 	}
 	
-	public void indexAllFiles(File folder,INode parentNode) {
+	public void indexAllFiles(File folder,INode<File> parentNode) {
 		
 		if (parentNode == null){
 			//root
-			parentNode = new INode();
-			parentNode.setLocalFile(folder);
+			parentNode = new LocalINode();
+			parentNode.setFile(folder);
 			parentNode.setRoot(true);
 			parentNode.setDir(true);
 			
@@ -45,9 +45,9 @@ public class LocalFileStore {
 		
 		
 	    for (File fileEntry : folder.listFiles()) {
-	    	INode childNode = new INode();
+	    	INode<File> childNode = new LocalINode();
 	    	childNode.setParent(parentNode);
-	    	childNode.setLocalFile(fileEntry);
+	    	childNode.setFile(fileEntry);
 	    	parentNode.addChild(childNode);
 	    	nodeMap.put(childNode.getFullPathName(),childNode);
 	    	System.out.println(childNode.getFullPathName());

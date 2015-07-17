@@ -2,7 +2,7 @@ package gdrivejava.common;
 
 public class INodeWalker {
 
-	
+	/*
 	public void printStructure(INode root){
 		printNode(root,0);
 	}
@@ -31,5 +31,6 @@ public class INodeWalker {
 		}
 		return ;
 	}
+	*/
 	
 }

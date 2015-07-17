@@ -31,11 +31,11 @@ public class GoogleFileStore implements Serializable{
 
 
 	HashMap<String, com.google.api.services.drive.model.File> fileMap = null; // need to be changed
-	HashMap<String, INode> nodesMap = null; // id, Inode
-	HashMap<String, INode> pathMap =null;
+	HashMap<String, INode<com.google.api.services.drive.model.File>> nodesMap = null; // id, Inode
+	HashMap<String, INode<com.google.api.services.drive.model.File>> pathMap =null;
 	final static String FOLDER_MIME="application/vnd.google-apps.folder";
 	final static String FILE_MIME="application/vnd.google-apps.file";
-	INode rootNode =null;
+	INode<com.google.api.services.drive.model.File> rootNode =null;
 	
 	
 
@@ -50,8 +50,8 @@ public class GoogleFileStore implements Serializable{
 	public GoogleFileStore(GoogleFileSystem fs) throws Exception {
 		// TODO Auto-generated constructor stub
 		fileMap = new HashMap<String, com.google.api.services.drive.model.File>();
-		nodesMap = new HashMap<String, INode>();
-		pathMap= new HashMap<String, INode>();
+		nodesMap = new HashMap<String, INode<com.google.api.services.drive.model.File>>();
+		pathMap= new HashMap<String, INode<com.google.api.services.drive.model.File>>();
 		mGFS = fs;
 		mDrive = mGFS.getDrive();
 		if (mDrive ==null || mGFS==null){
@@ -66,7 +66,7 @@ public class GoogleFileStore implements Serializable{
 
 
 
-	public HashMap<String, INode> getPathMap() {
+	public HashMap<String, INode<com.google.api.services.drive.model.File>> getPathMap() {
 		return pathMap;
 	}
 
@@ -74,7 +74,7 @@ public class GoogleFileStore implements Serializable{
 
 
 
-	public void setPathMap(HashMap<String, INode> pathMap) {
+	public void setPathMap(HashMap<String, INode<com.google.api.services.drive.model.File>> pathMap) {
 		this.pathMap = pathMap;
 	}
 
@@ -96,8 +96,8 @@ public class GoogleFileStore implements Serializable{
 			//insert
 			if (pathMap.containsKey(parentPath)){
 				System.out.println("remote: contains " + parentPath);
-				INode temp = new INode();
-				INode parNode =pathMap.get(parentPath);
+				INode<com.google.api.services.drive.model.File> temp = new GoogleINode();
+				INode<com.google.api.services.drive.model.File> parNode =pathMap.get(parentPath);
 				com.google.api.services.drive.model.File created=null;
 				if (file.isDirectory()){
 					created =insertFile(mDrive, parNode.getId(), FOLDER_MIME,file);
@@ -110,7 +110,7 @@ public class GoogleFileStore implements Serializable{
 					temp.setId(created.getId());
 					temp.setParent(parNode);
 					parNode.addChild(temp);
-					parNode.setRemoteFile(created);
+					parNode.setFile(created);
 				}else{
 					System.out.println(" upload === null"+ file.getName());
 				}
@@ -134,11 +134,11 @@ public class GoogleFileStore implements Serializable{
 			System.out.println(this.mGFS.getRootPath()+path + " not exists");
 		}else{
 			if (!file.isDirectory()){
-				INode remoteNode=  pathMap.get(path);
+				INode<com.google.api.services.drive.model.File> remoteNode=  pathMap.get(path);
 				FileContent mediaContent = new FileContent(null, file);
 				try {
-					com.google.api.services.drive.model.File updatedFile = mDrive.files().update(remoteNode.getId(), remoteNode.getRemoteFile(),mediaContent).execute();
-					remoteNode.setRemoteFile(updatedFile);
+					com.google.api.services.drive.model.File updatedFile = mDrive.files().update(remoteNode.getId(), remoteNode.getFile(),mediaContent).execute();
+					remoteNode.setFile(updatedFile);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -196,8 +196,8 @@ public class GoogleFileStore implements Serializable{
 
 
 	public void downloadFile(String path){
-		INode node =pathMap.get(path);
-		com.google.api.services.drive.model.File f  = node.getRemoteFile();
+		INode<com.google.api.services.drive.model.File> node =pathMap.get(path);
+		com.google.api.services.drive.model.File f  = node.getFile();
 		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
 		File output = new File(DriveMain.LocationPath + path);
@@ -214,7 +214,7 @@ public class GoogleFileStore implements Serializable{
 				fis.close();
 
 				System.out.println(md5);
-				System.out.println(node.getRemoteFile().getMd5Checksum());
+				System.out.println(node.getFile().getMd5Checksum());
 				System.out.println(path + "  downloaded");
 			}
 			catch (IOException e) 
@@ -260,7 +260,7 @@ public class GoogleFileStore implements Serializable{
 
 
 		public boolean downFile(String fileName, String Path) throws IOException{
-			com.google.api.services.drive.model.File f  = pathMap.get(fileName).getRemoteFile();
+			com.google.api.services.drive.model.File f  = pathMap.get(fileName).getFile();
 			///	String downloadUrl = f.getDownloadUrl();
 			String surl = f.getDownloadUrl();
 			File output = new File(DriveMain.LocationPath + fileName);
@@ -318,23 +318,24 @@ public class GoogleFileStore implements Serializable{
 					continue;
 				}
 				ParentReference parent = f.getParents().get(0);
-				INode node ;
+				INode<com.google.api.services.drive.model.File> node ;
 				if (nodesMap.containsKey(f.getId())){
 					node = nodesMap.get(f.getId());
-					node.setRemoteFile(f);
+					node.setFile(f);
 				}else{
-					node = new INode(f);
+					node = new GoogleINode();
+					node.setFile(f);
 					nodesMap.put(f.getId(), node);
 				}
 				node.setId(f.getId());
 
-				INode parNode=null;
+				INode<com.google.api.services.drive.model.File> parNode=null;
 				if (nodesMap.containsKey(parent.getId())){
 					parNode = nodesMap.get(parent.getId());
 
 				}else {
-					parNode = new INode();
-					parNode.setRemoteFile(fileMap.get(parent.getId()));
+					parNode = new GoogleINode();
+					parNode.setFile(fileMap.get(parent.getId()));
 					nodesMap.put(parent.getId(),parNode);	
 				}
 
@@ -377,23 +378,24 @@ public class GoogleFileStore implements Serializable{
 
 			for (com.google.api.services.drive.model.File f : result){
 				ParentReference parent = f.getParents().get(0);
-				INode node ;
+				INode<com.google.api.services.drive.model.File> node ;
 				if (nodesMap.containsKey(f.getId())){
 					node = nodesMap.get(f.getId());
 				}else{
-					node = new INode(f);
+					node = new GoogleINode();
+					node.setFile(f);
 					node.setDir(true);
 					nodesMap.put(f.getId(), node);
 				}
 				node.setId(f.getId());
-				INode parNode;
+				INode<com.google.api.services.drive.model.File> parNode;
 				if (nodesMap.containsKey(parent.getId())){
 					parNode = nodesMap.get(parent.getId());
 
 				}else {
-					parNode = new INode();
+					parNode = new GoogleINode();
 					parNode.setDir(true);
-					parNode.setRemoteFile(fileMap.get(parent.getId()));
+					parNode.setFile(fileMap.get(parent.getId()));
 					nodesMap.put(parent.getId(),parNode);	
 				}
 				if (parent.getIsRoot()){

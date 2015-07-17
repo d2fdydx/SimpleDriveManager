@@ -1,6 +1,8 @@
 package gdrivejava.local;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,8 +10,9 @@ import gdrivejava.common.AbstractFileSystem;
 import gdrivejava.common.INode;
 import gdrivejava.common.SyncAction;
 import gdrivejava.event.SyncEvent;
+import gdrivejava.google.GoogleINode;
 
-public class LocalFileSystem extends AbstractFileSystem{
+public class LocalFileSystem extends AbstractFileSystem<File>{
 
 	LocalFileStore store=null;
 	LocalFileSystem me=null;
@@ -32,8 +35,9 @@ public class LocalFileSystem extends AbstractFileSystem{
 	}
 
 	@Override
-	public Map<String, INode> getFilesMap() {
+	public Map<String, INode<File>> getFilesMap() {
 		// TODO Auto-generated method stub
+
 		return store.getNodeMap();
 	}
 

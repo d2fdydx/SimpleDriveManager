@@ -1,13 +1,10 @@
 package gdrivejava.common;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.codec.digest.DigestUtils;
 
 import gdrivejava.event.SyncEvent;
 import gdrivejava.google.GoogleFileSystem;
@@ -21,9 +18,9 @@ public class Synchronizer {
 	public void start(){
 		FsMap= new HashMap<>();
 		
-		FileSystem remote  = new GoogleFileSystem();
+		FileSystem<?> remote  = new GoogleFileSystem();
 		remote.setRootPath(DriveMain.LocationPath);
-		FileSystem local = new LocalFileSystem();
+		FileSystem<?> local = new LocalFileSystem();
 		local.setRootPath(DriveMain.LocationPath);
 		FsPair pair = new FsPair(local, remote);
 		FsMap.put(DriveMain.LocationPath,pair);
@@ -35,13 +32,14 @@ public class Synchronizer {
 	void syncAll(){
 		
 		for (String root : FsMap.keySet()){
-			FileSystem localFs = FsMap.get(root).getLocalFileSystem();
-			Map<String, INode> localMap = localFs.getFilesMap();
-			FileSystem remoteFs =FsMap.get(root).getRemoteFileSystem();
-			
+			FileSystem<File> localFs = FsMap.get(root).getLocalFileSystem();
+			Map<String, INode<File>> localMap = localFs.getFilesMap();
+			 
+			FileSystem<Object> remoteFs =FsMap.get(root).getRemoteFileSystem();
+		
 
 
-				Map<String,INode> remoteMap = remoteFs.getFilesMap();
+				Map<String,INode<Object>> remoteMap = remoteFs.getFilesMap();
 				List<SyncEvent> remoteEvents = new ArrayList<>();
 				List<SyncEvent> localEvents = new ArrayList<>();
 				//pull
@@ -51,7 +49,7 @@ public class Synchronizer {
 
 
 					if(!localMap.containsKey(remotePath)){
-						INode remoteNode = remoteMap.get(remotePath);
+						INode<Object> remoteNode = remoteMap.get(remotePath);
 						
 						if (!remoteNode.isDir()){
 							String tpath = remoteNode.getFullPathName();
@@ -69,17 +67,16 @@ public class Synchronizer {
 
 					}else{
 						 //check modified time .etc
-						INode localNode = localMap.get(remotePath);
-						long localTime =localNode.getLocalFile().lastModified();
-						INode remoteNode = remoteMap.get(remotePath);
+						INode<File> localNode = localMap.get(remotePath);
+						long localTime =localNode.getModifiedTime();
+						INode<Object> remoteNode = remoteMap.get(remotePath);
 						if (remoteNode.isDir())
 							continue;
-						long remoteTime = remoteNode.getRemoteFile().getModifiedDate().getValue();
+						long remoteTime = remoteNode.getModifiedTime();
 						if (remoteTime > localTime){ // remote newer?
-							try {
-							FileInputStream fis = new FileInputStream(localNode.getLocalFile());
+						
 							
-								if (!remoteNode.getRemoteFile().getMd5Checksum().equals(DigestUtils.md5Hex(fis))){
+								if (!remoteNode.getMd5CheckSum().equals(localNode.getMd5CheckSum())){
 									//download
 									String tpath = remoteNode.getFullPathName();
 									SyncEvent e= new SyncEvent();
@@ -87,15 +84,11 @@ public class Synchronizer {
 									e.setPath(tpath);
 									remoteEvents.add(e);
 								}
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
+							
 						}else{
-							try {
-								FileInputStream fis = new FileInputStream(localNode.getLocalFile());
+							
 								
-									if (!remoteNode.getRemoteFile().getMd5Checksum().equals(DigestUtils.md5Hex(fis))){
+									if (!remoteNode.getMd5CheckSum().equals(localNode.getMd5CheckSum())){
 										//download
 										String tpath = remoteNode.getFullPathName();
 										SyncEvent e= new SyncEvent();
@@ -103,10 +96,7 @@ public class Synchronizer {
 										e.setPath(tpath);
 										remoteEvents.add(e);
 									}
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
+								
 						}
 					
 					}
@@ -117,7 +107,7 @@ public class Synchronizer {
 				//push
 				for (String localId: localMap.keySet()){
 					if (!remoteMap.containsKey(localId)){
-						INode localNode = localMap.get(localId);
+						INode<File> localNode = localMap.get(localId);
 						//push new file
 						if (!localNode.isDir()){
 							String tpath = localNode.getFullPathName();
