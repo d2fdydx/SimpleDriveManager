@@ -19,7 +19,7 @@ import gdrivejava.main.DriveMain;
 
 public class GoogleFileSystem extends AbstractFileSystem<File> {
 	
-	final static String fileDb =".googldIndex";
+	final static String fileDb =".googleIndex";
 	Drive mDrive=null;
 	GoogleFileStore mStore =null;
 	
