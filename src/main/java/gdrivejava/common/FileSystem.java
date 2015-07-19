@@ -15,7 +15,9 @@ public interface FileSystem<F> {
 	public void setRootPath(String path);
 	public Map<String, INode<F>> getFilesMap();
 	public void addEventListener(SyncEventListener listener);
-	
-	
+	public void destoryThis();
+	public void criticalDestory();
+	public void join();
+	public void refresh(INode<F> node);
 	
 }

@@ -1,6 +1,7 @@
 package gdrivejava.local;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,10 +29,17 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 		this.rootPath = rootPath;
 	}
 
-	public LocalFileSystem(){
+	public LocalFileSystem(String rp){
 		super("Local FS");
+		rootPath=rp;
 		me =this;
-		store= new LocalFileStore(this);
+		try {
+			store= new LocalFileStore(this);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			this.destoryThis();
+		}
 	}
 
 	@Override
@@ -48,44 +56,25 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 	}
 
 	@Override
-	protected Runnable getRunnable() {
+	protected String getIndexName() {
 		// TODO Auto-generated method stub
-		return new Runnable() {
-
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				while (true){
-					//do event first
-					if (eventList.size()>0){
-						SyncEvent e = null;
-						synchronized(eventList){
-							e= eventList.remove(0);
-
-						}
-						sync(e.getPath(),e.getAction());
-
-						continue;
-					}
-
-					//
-
-					synchronized (me) {
-						try {
-							me.wait(5000l);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-
-				}
-
-
-			}
-		};
-
+		return null;
 	}
+
+	@Override
+	protected Serializable getStore() {
+		// TODO Auto-generated method stub
+		return (Serializable) store;
+	}
+
+	@Override
+	public void refresh(INode<File> node) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	
 
 
 }

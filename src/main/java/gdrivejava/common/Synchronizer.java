@@ -1,6 +1,7 @@
 package gdrivejava.common;
 
 import java.io.File;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,19 +18,44 @@ public class Synchronizer {
 
 	public void start(){
 		FsMap= new HashMap<>();
-		
-		FileSystem<?> remote  = new GoogleFileSystem();
-		remote.setRootPath(DriveMain.LocationPath);
-		FileSystem<?> local = new LocalFileSystem();
-		local.setRootPath(DriveMain.LocationPath);
+		Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+			
+			@Override
+			public void uncaughtException(Thread thread, Throwable exc) {
+				// TODO Auto-generated method stub
+				exc.printStackTrace();
+				for (String p : FsMap.keySet()){
+					FsPair t = FsMap.get(p);
+					t.getLocalFileSystem().criticalDestory();
+					t.getRemoteFileSystem().criticalDestory();
+				}
+				for (String p : FsMap.keySet()){
+					FsPair t = FsMap.get(p);
+					t.getLocalFileSystem().join();
+					t.getRemoteFileSystem().join();
+				}
+			}
+		});
+		FileSystem<?> remote  = new GoogleFileSystem(DriveMain.LocationPath);
+	
+		FileSystem<?> local = new LocalFileSystem(DriveMain.LocationPath);
+
 		FsPair pair = new FsPair(local, remote);
 		FsMap.put(DriveMain.LocationPath,pair);
-		syncAll();
+		try {
+			syncAll();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			//wtf !!
+			throw new RuntimeException();
+			
+		}
 		
 	}
 
 
-	void syncAll(){
+	void syncAll() throws Exception {
 		
 		for (String root : FsMap.keySet()){
 			FileSystem<File> localFs = FsMap.get(root).getLocalFileSystem();
@@ -52,8 +78,16 @@ public class Synchronizer {
 						INode<Object> remoteNode = remoteMap.get(remotePath);
 						
 						if (!remoteNode.isDir()){
-							String tpath = remoteNode.getFullPathName();
-							System.out.println( remoteNode.getFullPathName());
+							String tpath = null;
+						
+							try {
+								tpath = remoteNode.getFullPathName();
+							} catch (Exception e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							
+						
 							SyncEvent e= new SyncEvent();
 							e.setAction(SyncAction.Pull);
 							e.setPath(tpath);
@@ -68,15 +102,21 @@ public class Synchronizer {
 					}else{
 						 //check modified time .etc
 						INode<File> localNode = localMap.get(remotePath);
-						long localTime =localNode.getModifiedTime();
+						long localTime = 0;
+						
+						localTime = localNode.getLastModifiedTime();
+						
 						INode<Object> remoteNode = remoteMap.get(remotePath);
 						if (remoteNode.isDir())
 							continue;
-						long remoteTime = remoteNode.getModifiedTime();
+						long remoteTime;
+						
+						remoteTime = remoteNode.getLastModifiedTime();
+						
 						if (remoteTime > localTime){ // remote newer?
 						
 							
-								if (!remoteNode.getMd5CheckSum().equals(localNode.getMd5CheckSum())){
+								if (!remoteNode.getCheckSum().equals(localNode.getCheckSum())){
 									//download
 									String tpath = remoteNode.getFullPathName();
 									SyncEvent e= new SyncEvent();
@@ -88,7 +128,7 @@ public class Synchronizer {
 						}else{
 							
 								
-									if (!remoteNode.getMd5CheckSum().equals(localNode.getMd5CheckSum())){
+									if (!remoteNode.getCheckSum().equals(localNode.getCheckSum())){
 										//download
 										String tpath = remoteNode.getFullPathName();
 										SyncEvent e= new SyncEvent();
@@ -128,4 +168,8 @@ public class Synchronizer {
 		
 	}
 
+	
+	public void cleanUp(){
+		
+	}
 }

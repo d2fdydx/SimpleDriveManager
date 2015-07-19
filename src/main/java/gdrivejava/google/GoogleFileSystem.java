@@ -1,7 +1,10 @@
 package gdrivejava.google;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Map;
+
+import org.apache.commons.io.FilenameUtils;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
@@ -9,32 +12,56 @@ import com.google.api.services.drive.model.File;
 import gdrivejava.auth.GoogleAuth;
 import gdrivejava.common.AbstractFileSystem;
 import gdrivejava.common.INode;
+import gdrivejava.common.ObjectStoreUtil;
 import gdrivejava.common.SyncAction;
 import gdrivejava.event.SyncEvent;
+import gdrivejava.main.DriveMain;
 
 public class GoogleFileSystem extends AbstractFileSystem<File> {
 	
+	final static String fileDb =".googldIndex";
 	Drive mDrive=null;
 	GoogleFileStore mStore =null;
-	GoogleFileSystem me =null;
+	
 	String rootPath=null;
-	public GoogleFileSystem() {
+	public GoogleFileSystem(String rp) {
 		super("Google FS");
-		me =this;
+		rootPath=rp;
 		// TODO Auto-generated constructor stub
 		try {
 			mDrive =  GoogleAuth.getDriveService();
 			
-			mStore = new GoogleFileStore(this);
-				
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.err.println("Problem with Google File System " + rootPath);
+			return ;
 		} 
+		try {
+			mStore = (GoogleFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
+			return ;
+		} catch (ClassNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			mStore = new GoogleFileStore(this);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			mStore = new GoogleFileStore(this);
+		}
 		
+		
+		try {
+			
+			
+			ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), mStore);
+			System.out.println("created Index");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.err.println("cannot create Index");
+		}	
 	}
 	
 	
@@ -59,7 +86,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 
 
 	@Override
-	protected void sync(String path, SyncAction action) {
+	protected void sync(String path, SyncAction action) throws Exception {
 		// TODO Auto-generated method stub
 		System.out.println("event:" + path  + " "+ action);
 		switch(action){
@@ -80,51 +107,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 
 
 
-	@Override
-	protected Runnable getRunnable() {
-		// TODO Auto-generated method stub
-		return new Runnable() {
-
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				while (true){
-					//do event first
-					if (eventList.size()>0){
-						
-						SyncEvent e = null;
-						synchronized(eventList){
-							e= eventList.remove(0);
-
-						}
-						System.out.println("hv event " + e.getPath());
-						sync(e.getPath(),e.getAction());
-
-
-
-						continue;
-					}
-
-					//
-					System.out.println(me.thread.toString());
-
-					synchronized (me) {
-						try {
-							me.wait(5000l);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-
-				}
-
-
-			}
-		};
-
-	}
-
+	
 
 
 
@@ -141,6 +124,40 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 
 	public void setRootPath(String rootPath) {
 		this.rootPath = rootPath;
+	}
+
+
+
+
+
+
+	@Override
+	protected String getIndexName() {
+		// TODO Auto-generated method stub
+		return FilenameUtils.concat(rootPath, fileDb);
+	}
+
+
+
+
+
+
+	@Override
+	protected Serializable getStore() {
+		// TODO Auto-generated method stub
+		return  mStore;
+	}
+
+
+
+
+
+
+	@Override
+	public void refresh(INode<File> node) {
+		// TODO Auto-generated method stub
+		
+		
 	}
 
 

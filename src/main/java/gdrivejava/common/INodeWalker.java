@@ -19,11 +19,12 @@ public class INodeWalker {
 			printNode(child,depth +1);
 		}
 	}
+	
 	public void setFullPathName(INode root){
 		
 		setName(root,"");
 	}
-	void setName(INode current, String parentStr){
+	void setName(INode<?> current, String parentStr){
 		current.setFullPathName(parentStr+current.getName());
 		System.out.println(current.getFullPathName());
 		for (INode child : current.getChildren()){

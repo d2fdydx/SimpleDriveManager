@@ -12,19 +12,23 @@ import gdrivejava.common.INode;
 public class LocalINode extends INode<File>{
 
 	@Override
-	protected String getName() {
-		// TODO Auto-generated method stub
-		return getFile().getName();
+	public void setFile(File file) {
+		
+		super.setFile(file);
+		this.name=file.getName();
+		this.fileStr=file.getAbsolutePath();
+		this.setLastModifiedTime(file.lastModified());
+		if (!file.isDirectory()){
+			try {
+				this.checkSum = getMd5CheckSum();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				this.checkSum = "";
+			}
+		}
 	}
 
-	@Override
-	protected long getModifiedTime() {
-		// TODO Auto-generated method stub
-		return getFile().lastModified();
-	}
-
-	@Override
-	protected String getMd5CheckSum() {
+	protected String getMd5CheckSum() throws Exception {
 		// TODO Auto-generated method stub
 		FileInputStream fis = null;
 		try {
@@ -43,4 +47,5 @@ public class LocalINode extends INode<File>{
 		return res;
 	}
 
+	
 }
