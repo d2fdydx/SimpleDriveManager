@@ -2,6 +2,7 @@ package gdrivejava.google;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
@@ -15,7 +16,6 @@ import gdrivejava.common.INode;
 import gdrivejava.common.ObjectStoreUtil;
 import gdrivejava.common.SyncAction;
 import gdrivejava.event.SyncEvent;
-import gdrivejava.main.DriveMain;
 
 public class GoogleFileSystem extends AbstractFileSystem<File> {
 	
@@ -38,30 +38,28 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 			System.err.println("Problem with Google File System " + rootPath);
 			return ;
 		} 
-		try {
+	
 			mStore = (GoogleFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
-			return ;
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			if (mStore!=null){
+				mStore.setDrive(mDrive);
+				mStore.setGoogleFs(this);
+				return ;
+			}
+		
 			mStore = new GoogleFileStore(this);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-			mStore = new GoogleFileStore(this);
-		}
 		
 		
-		try {
+		
+		
 			
 			
-			ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), mStore);
-			System.out.println("created Index");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			System.err.println("cannot create Index");
-		}	
+			if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), mStore)){
+				System.out.println("created Index");
+			}else{
+				System.err.println("fail to create Index");
+			}
+		
+		
 	}
 	
 	
@@ -160,6 +158,47 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 		
 	}
 
+
+
+
+
+
+	@Override
+	protected void refreshIndex() {
+		// TODO Auto-generated method stub
+		try {
+			List <String> t =this.mStore.refreshIndex();
+			for (String p : t){
+				System.out.println("remote: modified file"+ p);
+				SyncEvent e = new SyncEvent();
+				e.setAction(SyncAction.Pull);
+				e.setPath(p);
+				this.publishSyncEvent(e);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+
+
+
+
+
+	@Override
+	public void startIndependentSync() {
+		// TODO Auto-generated method stub
+		setInitflag(false);
+	}
+
+
+
+
+
+
+	
 
 
 

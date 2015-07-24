@@ -85,7 +85,7 @@ public abstract class INode<E> implements Serializable {
 	public void setRoot(boolean root) {
 		this.root = root;
 	}
-	public String getFullPathName() throws Exception {
+	public String getFullPathName() {
 
 		if (parent !=null){
 			if (!parent.isRoot()){

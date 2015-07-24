@@ -22,6 +22,7 @@ public class GoogleINode extends INode<File>{
 	public void setFile(File file) {
 		
 		super.setFile(file);
+		setId(file.getId());
 		this.fileStr="";
 		this.name = file.getTitle();
 		this.setLastModifiedTime(file.getModifiedDate().getValue());

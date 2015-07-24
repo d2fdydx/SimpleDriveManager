@@ -23,18 +23,18 @@ public class LocalFileStore implements Serializable{
 		this.nodeMap = nodeMap;
 	}
 
-	public LocalFileStore(LocalFileSystem fs) throws Exception{
+	public LocalFileStore(LocalFileSystem fs) {
 		fileFs = fs;
 		nodeMap=new HashMap<String, INode<File>>();
 		buildStore();
 	}
 	
-	void buildStore() throws Exception{
+	void buildStore() {
 		File rootfile = new File(DriveMain.LocationPath);
 		indexAllFiles(rootfile,null);
 	}
 	
-	public void indexAllFiles(File folder,INode<File> parentNode) throws Exception {
+	public void indexAllFiles(File folder,INode<File> parentNode)  {
 		
 		if (parentNode == null){
 			//root

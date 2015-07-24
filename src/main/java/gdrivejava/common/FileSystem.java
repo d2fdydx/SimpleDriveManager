@@ -10,6 +10,7 @@ public interface FileSystem<F> {
 
 
 	public void addSyncEvent(SyncEvent e);
+	public void startIndependentSync();
 	public void addSyncEvent(List<SyncEvent> es);
 	public String getRootPath();
 	public void setRootPath(String path);

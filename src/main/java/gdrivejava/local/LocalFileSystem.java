@@ -3,9 +3,6 @@ package gdrivejava.local;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
@@ -15,7 +12,6 @@ import gdrivejava.common.INode;
 import gdrivejava.common.ObjectStoreUtil;
 import gdrivejava.common.SyncAction;
 import gdrivejava.event.SyncEvent;
-import gdrivejava.google.GoogleINode;
 
 public class LocalFileSystem extends AbstractFileSystem<File>{
 
@@ -38,30 +34,26 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 		rootPath=rp;
 		me =this;
 		
-		try {
+	
 			store = (LocalFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
+		if (store !=null){	
 			return;
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
 		}
 		
+		
 	
-		try {
+		
+			
 			store= new LocalFileStore(this);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), store);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			
+		
+		
+			if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), store)){
+				
+			}else{
+				
+			}
+		
 		
 	}
 
@@ -94,6 +86,18 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 	public void refresh(INode<File> node) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	protected void refreshIndex() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void startIndependentSync() {
+		// TODO Auto-generated method stub
+		setInitflag(false);
 	}
 
 

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import gdrivejava.event.SyncEvent;
+import gdrivejava.event.listener.SyncEventListener;
 import gdrivejava.google.GoogleFileSystem;
 import gdrivejava.local.LocalFileSystem;
 import gdrivejava.main.DriveMain;
@@ -43,7 +44,7 @@ public class Synchronizer {
 		FsPair pair = new FsPair(local, remote);
 		FsMap.put(DriveMain.LocationPath,pair);
 		try {
-			syncAll();
+			startSync();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,17 +56,19 @@ public class Synchronizer {
 	}
 
 
-	void syncAll() throws Exception {
+	void startSync() throws Exception {
 		
 		for (String root : FsMap.keySet()){
 			FileSystem<File> localFs = FsMap.get(root).getLocalFileSystem();
 			Map<String, INode<File>> localMap = localFs.getFilesMap();
-			 
-			FileSystem<Object> remoteFs =FsMap.get(root).getRemoteFileSystem();
 		
+			FileSystem<Object> remoteFs =FsMap.get(root).getRemoteFileSystem();
+			Map<String,INode<Object>> remoteMap = remoteFs.getFilesMap();
+			localFs.addEventListener(new LocalListener(remoteFs, localFs));
+			remoteFs.addEventListener(new RemoteListener(remoteFs, localFs));
 
 
-				Map<String,INode<Object>> remoteMap = remoteFs.getFilesMap();
+				
 				List<SyncEvent> remoteEvents = new ArrayList<>();
 				List<SyncEvent> localEvents = new ArrayList<>();
 				//pull
@@ -161,14 +164,72 @@ public class Synchronizer {
 				}
 				remoteFs.addSyncEvent(remoteEvents);
 				localFs.addSyncEvent(localEvents);
-			
+			remoteFs.startIndependentSync();
+			localFs.startIndependentSync();
 		}
 		
 //down
 		
 	}
 
+	class LocalListener implements SyncEventListener{
+		FileSystem<Object> remoteFs;
+		FileSystem<File> localFs;
+		public LocalListener (FileSystem<Object> remoteFs, FileSystem<File> localFs) {
+			// TODO Auto-generated constructor stub
+			super ();
+			this.remoteFs = remoteFs;
+			this.localFs=localFs;
+		}
+		@Override
+		public void handle(SyncEvent event) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+	}
 	
+	class RemoteListener implements SyncEventListener{
+
+		FileSystem<Object> remoteFs;
+		FileSystem<File> localFs;
+		Map<String,INode<Object>> remoteMap =null;
+		Map<String,INode<File>> localMap = null;
+		public RemoteListener(FileSystem<Object> remoteFs, FileSystem<File> localFs) {
+			// TODO Auto-generated constructor stub
+			super ();
+			this.remoteFs = remoteFs;
+			this.localFs=localFs;
+			this.remoteMap = remoteFs.getFilesMap();
+			this.localMap = localFs.getFilesMap();
+		}
+		
+		@Override
+		public void handle(SyncEvent event) {
+			// TODO Auto-generated method stub
+			switch(event.getAction()){
+			case Pull:
+				INode<?> rf = remoteMap.get(event.getPath()),
+					lf = localMap.get(event.getPath());
+				if (lf ==null)
+					remoteFs.addSyncEvent(event);
+				//should check conflict ( by fs last modified time
+				//
+				//sth sth
+				//==================
+				if (!rf.getCheckSum().equals(lf.getCheckSum())){
+					remoteFs.addSyncEvent(event);
+				}
+				
+				
+				break;
+			default:
+				break;
+			}
+			
+		}
+		
+	}
 	public void cleanUp(){
 		
 	}
