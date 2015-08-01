@@ -25,6 +25,8 @@ public class GoogleINode extends INode<File>{
 		setId(file.getId());
 		this.fileStr="";
 		this.name = file.getTitle();
+		if (file.getMimeType().contains("application/vnd.google-apps.folder"))
+			this.setDir(true);
 		this.setLastModifiedTime(file.getModifiedDate().getValue());
 		this.checkSum = file.getMd5Checksum();
 	}

@@ -83,6 +83,7 @@ public abstract class INode<E> implements Serializable {
 		return root;
 	}
 	public void setRoot(boolean root) {
+		this.setDir(true);
 		this.root = root;
 	}
 	public String getFullPathName() {
@@ -92,18 +93,17 @@ public abstract class INode<E> implements Serializable {
 				
 				if (file !=null){
 					//parent.getFullPathName()+"/"+getName();
+					fullPathName=parent.getFullPathName()+"/"+"noName";
 					return parent.getFullPathName()+"/"+getName();
-				}
-				fullPathName=parent.getFullPathName()+"/"+"noName";
-				return parent.getFullPathName()+"/"+"noName";
+				}				
+				return fullPathName;
 			}else{
 				
 				if (file!=null){
 					fullPathName = parent.getFullPathName()+getName();
 					return parent.getFullPathName()+getName();
 				}
-				fullPathName =parent.getFullPathName()+"noName";
-				return parent.getFullPathName()+"noName";
+				return fullPathName;
 			}
 		
 		}

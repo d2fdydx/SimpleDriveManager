@@ -37,9 +37,23 @@ public class Synchronizer {
 				}
 			}
 		});
-		FileSystem<?> remote  = new GoogleFileSystem(DriveMain.LocationPath);
+		FileSystem<?> remote = null;
+		FileSystem<?> local =null;
+		try {
+			remote = new GoogleFileSystem(DriveMain.LocationPath);
+			local = new LocalFileSystem(DriveMain.LocationPath);
+			
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			if (remote!=null)
+				remote.criticalDestory();
+			if (local!=null)
+				local.criticalDestory();
+			return;
+		}
 	
-		FileSystem<?> local = new LocalFileSystem(DriveMain.LocationPath);
+		
 
 		FsPair pair = new FsPair(local, remote);
 		FsMap.put(DriveMain.LocationPath,pair);
@@ -71,11 +85,11 @@ public class Synchronizer {
 				
 				List<SyncEvent> remoteEvents = new ArrayList<>();
 				List<SyncEvent> localEvents = new ArrayList<>();
-				//pull
+				//----------pull--------------
 				for (String remotePath : remoteMap.keySet()){
 					//do sth
 
-
+				//	System.out.println(remotePath);
 
 					if(!localMap.containsKey(remotePath)){
 						INode<Object> remoteNode = remoteMap.get(remotePath);
@@ -110,6 +124,14 @@ public class Synchronizer {
 						localTime = localNode.getLastModifiedTime();
 						
 						INode<Object> remoteNode = remoteMap.get(remotePath);
+						if (remoteNode.getCheckSum() ==null ){
+							System.out.println("remote: " + remotePath);
+						}
+						if (localNode.getCheckSum()==null){
+							System.out.println("local: " + remotePath);
+						}
+						
+						
 						if (remoteNode.isDir())
 							continue;
 						long remoteTime;

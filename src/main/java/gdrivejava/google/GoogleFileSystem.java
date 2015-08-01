@@ -24,7 +24,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 	GoogleFileStore mStore =null;
 	
 	String rootPath=null;
-	public GoogleFileSystem(String rp) {
+	public GoogleFileSystem(String rp) throws Exception {
 		super("Google FS");
 		rootPath=rp;
 		// TODO Auto-generated constructor stub
@@ -45,7 +45,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 				mStore.setGoogleFs(this);
 				return ;
 			}
-		
+			System.out.println("Google FS start build index");
 			mStore = new GoogleFileStore(this);
 		
 		
@@ -167,7 +167,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 	protected void refreshIndex() {
 		// TODO Auto-generated method stub
 		try {
-			List <String> t =this.mStore.refreshIndex();
+			List <String> t =this.mStore.getUpdatedAndCreated();
 			for (String p : t){
 				System.out.println("remote: modified file"+ p);
 				SyncEvent e = new SyncEvent();

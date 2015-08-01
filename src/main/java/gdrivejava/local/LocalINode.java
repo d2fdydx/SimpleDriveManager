@@ -23,6 +23,7 @@ public class LocalINode extends INode<File>{
 				this.checkSum = getMd5CheckSum();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
+				e.printStackTrace();
 				this.checkSum = "";
 			}
 		}

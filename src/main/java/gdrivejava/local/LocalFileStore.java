@@ -1,31 +1,44 @@
 package gdrivejava.local;
 
-import gdrivejava.common.INode;
-import gdrivejava.common.ObjectStoreUtil;
-import gdrivejava.main.DriveMain;
-
 import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 
+import gdrivejava.common.INode;
+import gdrivejava.common.ListenerMap;
+import gdrivejava.common.ObjectStoreUtil;
+import gdrivejava.event.listener.ModifiedListener;
+import gdrivejava.main.DriveMain;
+
 public class LocalFileStore implements Serializable{
 	
-	HashMap<String,INode<File>> nodeMap = null;
+	Map<String,INode<File>> nodeMap = null;
 	transient LocalFileSystem fileFs =null;
-	
-	public HashMap<String,INode<File>> getNodeMap() {
+	long lastModifiedTime=0;
+	public Map<String,INode<File>> getNodeMap() {
 		return nodeMap;
 	}
 
-	public void setNodeMap(HashMap<String, INode<File>> nodeMap) {
-		this.nodeMap = nodeMap;
-	}
+
 
 	public LocalFileStore(LocalFileSystem fs) {
 		fileFs = fs;
 		nodeMap=new HashMap<String, INode<File>>();
+		nodeMap= new ListenerMap<>(nodeMap, new ModifiedListener<INode<File>>() {
+
+			@Override
+			public void notifyModified(INode<File> node) {
+				// TODO Auto-generated method stub
+				if (lastModifiedTime < node.getLastModifiedTime()){
+					lastModifiedTime = node.getLastModifiedTime();
+				}
+			}
+		});
+		
+		
 		buildStore();
 	}
 	

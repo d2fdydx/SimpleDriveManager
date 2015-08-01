@@ -18,6 +18,7 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 	LocalFileStore store=null;
 	LocalFileSystem me=null;
 	String rootPath=null;
+
 	final static String fileDb =".localIndex";
 
 
@@ -37,13 +38,14 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 	
 			store = (LocalFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
 		if (store !=null){	
+			
 			return;
 		}
 		
 		
 	
 		
-			
+			System.out.println("Local FS start build index");
 			store= new LocalFileStore(this);
 			
 		

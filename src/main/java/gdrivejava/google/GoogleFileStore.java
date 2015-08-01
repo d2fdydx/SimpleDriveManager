@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.management.RuntimeErrorException;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -22,12 +24,14 @@ import com.google.api.client.http.HttpResponse;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Files;
+import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.ParentReference;
 
-import gdrivejava.common.DirtyHashMap;
 import gdrivejava.common.INode;
-import gdrivejava.event.listener.DirtyListener;
+import gdrivejava.common.INodeWalker;
+import gdrivejava.common.ListenerMap;
+import gdrivejava.event.listener.ModifiedListener;
 import gdrivejava.main.DriveMain;
 
 //import com.google.api.services.drive.model.File;
@@ -35,12 +39,13 @@ import gdrivejava.main.DriveMain;
 public class GoogleFileStore implements Serializable{
 
 
-	transient HashMap<String, com.google.api.services.drive.model.File> fileMap = null; // need to be changed: id v.s. File
-	DirtyHashMap<com.google.api.services.drive.model.File> nodesMap = null; // id, Inode
-	DirtyHashMap<com.google.api.services.drive.model.File> pathMap =null;
+	transient Map<String, com.google.api.services.drive.model.File> fileMap = null; // need to be changed: id v.s. File
+	Map<String, INode<com.google.api.services.drive.model.File>> nodesMap = null; // id, Inode
+	Map<String, INode<com.google.api.services.drive.model.File>> pathMap =null;
 	final static String FOLDER_MIME="application/vnd.google-apps.folder";
 	final static String FILE_MIME="application/vnd.google-apps.file";
 	long lastModifiedTime=0;
+	long largestChangedId = 0;
 	INode<com.google.api.services.drive.model.File> rootNode =null;
 	
 
@@ -86,35 +91,36 @@ public class GoogleFileStore implements Serializable{
 
 
 
-	public GoogleFileStore(GoogleFileSystem fs)  {
+	public GoogleFileStore(GoogleFileSystem fs) throws Exception  {
 		// TODO Auto-generated constructor stub
+		
 		
 		fileMap = new HashMap<String, com.google.api.services.drive.model.File>();
 		
-		nodesMap = new DirtyHashMap<>();
-		
-		pathMap=  new DirtyHashMap<>();
-		pathMap= (DirtyHashMap<com.google.api.services.drive.model.File>) Collections.synchronizedMap(nodesMap);
-		pathMap.setListener(new DirtyListener() {
+		nodesMap = new HashMap<>(); 
+
+
+		HashMap<String , INode<com.google.api.services.drive.model.File>> tpathMap = new HashMap<>();
+		pathMap = new ListenerMap<>(tpathMap,new ModifiedListener<INode<com.google.api.services.drive.model.File>>() {
 
 			@Override
-			public void notifyDirty(INode<?> node) {
-				// TODO Auto-generated method stub
+			public void notifyModified(INode<com.google.api.services.drive.model.File> node) {
+				if (lastModifiedTime < node.getLastModifiedTime()){
+					lastModifiedTime = node.getLastModifiedTime();
+				}
 				
 			}
-			
-	
-		});
+
+		}); 
+		
+		
 		
 		googleFs = fs;
 		drive = googleFs.getDrive();
 
-		try {
-			buildStore();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
+		buildStore();
+		
 		
 	}
 
@@ -292,18 +298,18 @@ public class GoogleFileStore implements Serializable{
 
 		try {
 
-			getAllRemoteDirs();
+			//getAllRemoteDirs();
 			getAllRemoteFiles();
-			for(String id : nodesMap.keySet()){
-				INode temp = nodesMap.get(id);
-				if (temp.getLastModifiedTime() > this.lastModifiedTime){
-					this.lastModifiedTime = temp.getLastModifiedTime();
-				}
-				pathMap.put(temp.getFullPathName(),temp);
-			}
+			INodeWalker walker = new INodeWalker();
+			//walker.printStructure(rootNode);
+			System.out.println("find largest ID");;
+			setLargeChangeId();
+
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw new RuntimeException("cannot build Store");
 		}	
 
 
@@ -314,70 +320,20 @@ public class GoogleFileStore implements Serializable{
 
 	public List<com.google.api.services.drive.model.File>  getAllRemoteFiles() throws IOException{
 
-		List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
-		//System.out.println(mDrive.files().list().getQ());
-		Files.List request = drive.files().list().setQ("trashed=false and mimeType != 'application/vnd.google-apps.folder'");
+		fileMap=new HashMap<>();
+		List<com.google.api.services.drive.model.File> result = listFiles("trashed=false");
 
-		do {
-
-			com.google.api.services.drive.model.File a =null;
-
-			FileList files = request.execute();
-
-			result.addAll(files.getItems());
-			request.setPageToken(files.getNextPageToken());
-
-
-
-		} while (request.getPageToken() != null &&
-				request.getPageToken().length() > 0);
-
-		for (com.google.api.services.drive.model.File f : result){
-			if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0){
-				fileMap.put(f.getId(),f);
-			}
-
+	
+		buildNode(result);
+	
+		
+	
+		
+		for(INode<com.google.api.services.drive.model.File> temp: nodesMap.values()){
+			pathMap.put(temp.getFullPathName(),(INode<com.google.api.services.drive.model.File>) temp);
 		}
-
-		for (com.google.api.services.drive.model.File f : fileMap.values()){
-			List<ParentReference> tpr = f.getParents();
-			if(tpr==null||tpr.size()==0){
-
-				continue;
-			}
-			ParentReference parent = f.getParents().get(0);
-			INode<com.google.api.services.drive.model.File> node ;
-			if (nodesMap.containsKey(f.getId())){
-				//update node
-				node = nodesMap.get(f.getId());
-				node.setFile(f);
-			}else{
-				//create new node
-				node = new GoogleINode();
-				node.setFile(f);
-				nodesMap.put(f.getId(), node);
-			}
-			node.setId(f.getId());
-
-			INode<com.google.api.services.drive.model.File> parNode=null;
-			if (nodesMap.containsKey(parent.getId())){
-				parNode = nodesMap.get(parent.getId());
-
-			}else {
-				parNode = new GoogleINode();
-				if (fileMap.get(parent.getId())!=null){
-					parNode.setFile(fileMap.get(parent.getId()));
-				}
-				nodesMap.put(parent.getId(),parNode);	
-			}
-
-			node.setParent(parNode);
-			parNode.addChild(node);
-			parNode.setId(parent.getId());
-
-		}
-
-
+		
+		
 		return result;
 
 
@@ -385,153 +341,22 @@ public class GoogleFileStore implements Serializable{
 	}
 
 
-	public List<com.google.api.services.drive.model.File>  getAllRemoteDirs() throws IOException{
-		List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
-		//System.out.println(mDrive.files().list().getQ());
-		Files.List request = drive.files().list().setQ("trashed=false and mimeType = 'application/vnd.google-apps.folder'");
-
-		do {
-
-			FileList files = request.execute();
-
-			result.addAll(files.getItems());
-			request.setPageToken(files.getNextPageToken());
-
-
-
-		} while (request.getPageToken() != null &&
-				request.getPageToken().length() > 0);
-
-		for (com.google.api.services.drive.model.File f : result){
-			//System.out.println(f.getTitle());
-			fileMap.put(f.getId(),f);
-
-		}
-
-		for (com.google.api.services.drive.model.File f : result){
-			ParentReference parent = f.getParents().get(0);
-			INode<com.google.api.services.drive.model.File> node ;
-			if (nodesMap.containsKey(f.getId())){
-				node = nodesMap.get(f.getId());
-			}else{
-				node = new GoogleINode();
-				node.setFile(f);
-				node.setDir(true);
-				nodesMap.put(f.getId(), node);
-			}
-			node.setId(f.getId());
-			INode<com.google.api.services.drive.model.File> parNode;
-			if (nodesMap.containsKey(parent.getId())){
-				parNode = nodesMap.get(parent.getId());
-
-			}else {
-				parNode = new GoogleINode();
-				parNode.setDir(true);
-				if (fileMap.get(parent.getId())!=null){
-					parNode.setFile(fileMap.get(parent.getId()));
-				}
-				nodesMap.put(parent.getId(),parNode);	
-			}
-			if (parent.getIsRoot()){
-				//System.out.println("find root");
-				//System.out.println(parent.getId());
-				parNode.setRoot(true);
-				rootNode=parNode;
-			}
-			node.setParent(parNode);
-			parNode.addChild(node);
-			parNode.setId(parent.getId());
-		}
-
-
-
-		return result;
-
-
-	}
-
-	public List<String> refreshIndex() throws IOException{
+	
+	public List<String> getUpdatedAndCreated() throws IOException{
 		DateTime date = new DateTime (lastModifiedTime);
 		
 		List<String> pathList = new ArrayList<>();
-		List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
-		//System.out.println(mDrive.files().list().getQ());
-		if (drive ==null){
-			System.out.println("wt");
-		}
+
+
 		System.out.println(date.toStringRfc3339());
-		Files.List request = drive.files().list().setQ(String.format("trashed=false "+ " and modifiedDate > '%s'", date.toStringRfc3339()));
-
-		
 		fileMap =  new HashMap<>(); // need to be changed: id v.s. File
+		List<com.google.api.services.drive.model.File> result = listFiles(String.format("trashed=false "+ " and modifiedDate > '%s'", date.toStringRfc3339()));
 		
-		do {
-
+		buildNode(result);
 		
-			FileList files = request.execute();
-
-			result.addAll(files.getItems());
-			request.setPageToken(files.getNextPageToken());
-
-
-
-		} while (request.getPageToken() != null &&
-				request.getPageToken().length() > 0);
-
-		for (com.google.api.services.drive.model.File f : result){
-			if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0){
-				fileMap.put(f.getId(),f);
-			}
-
-		}
-
-		for (com.google.api.services.drive.model.File f : result){
-			List<ParentReference> tpr = f.getParents();
-			if(tpr==null||tpr.size()==0){
-
-				continue;
-			}
-
-			INode<com.google.api.services.drive.model.File> node ;
-			if (nodesMap.containsKey(f.getId())){
-				node = nodesMap.get(f.getId());
-				node.setFile(f);
-			}else{
-				node = new GoogleINode();
-				node.setFile(f);
-				nodesMap.put(f.getId(), node);
-			}
-			node.setId(f.getId());
-			if (f.getAppDataContents()){
-				node.setDir(true);
-			}
-
-			ParentReference parent = f.getParents().get(0);
-			INode<com.google.api.services.drive.model.File> parNode=null;
-			if (nodesMap.containsKey(parent.getId())){
-				parNode = nodesMap.get(parent.getId());
-
-			}else {
-				parNode = new GoogleINode();
-				// new 
-				if (fileMap.get(parent.getId())!=null){
-					parNode.setFile(fileMap.get(parent.getId()));
-				}
-				nodesMap.put(parent.getId(),parNode);	
-			}
-			if (parent.getIsRoot()){
-				//System.out.println("find root");
-				//System.out.println(parent.getId());
-				parNode.setRoot(true);
-				rootNode=parNode;
-			}
-			node.setParent(parNode);
-			parNode.addChild(node);
-			parNode.setId(parent.getId());
-
-		}
+	
 		
-		for (com.google.api.services.drive.model.File f : result){
+		for (com.google.api.services.drive.model.File f : fileMap.values()){
 			INode<com.google.api.services.drive.model.File> node =nodesMap.get(f.getId());
 			try {
 				pathMap.put(node.getFullPathName(),  node);
@@ -544,6 +369,119 @@ public class GoogleFileStore implements Serializable{
 		return pathList;
 	}
 
+	public List<String> getDeletedOrTrashed() throws IOException{
+		DateTime date = new DateTime (lastModifiedTime);
+	
+		return null;
+	}
+
+	
+	public void setLargeChangeId(){
+		
+		com.google.api.services.drive.Drive.Changes.List request=null;;
+		try {
+			request = drive.changes().list().setIncludeDeleted(true);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		if (request==null){
+			
+			return ;
+		}
+		
+		
+		ChangeList changes;
+		try {
+			changes = request.execute();
+			 largestChangedId= changes.getLargestChangeId();
+			  System.out.println("largest==========");
+		      System.out.println(changes.getLargestChangeId());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 
+		
+		
+	}
+	
+	List<com.google.api.services.drive.model.File> listFiles(String query) throws IOException{
+		List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
+		Files.List request = drive.files().list().set("corpus", "DOMAIN").setQ(query);
+		
+		do {
+
+		
+			FileList files = request.execute();
+
+			result.addAll(files.getItems());
+			request.setPageToken(files.getNextPageToken());
+
+
+
+		} while (request.getPageToken() != null &&
+				request.getPageToken().length() > 0);
+
+		for (com.google.api.services.drive.model.File f : result){
+			if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0){
+				fileMap.put(f.getId(),f);
+			}
+
+		}
+		return result;
+	}
+	
+	void buildNode(List<com.google.api.services.drive.model.File> result){
+		for (com.google.api.services.drive.model.File f : result){
+			if (f.getParents().size()==0){
+				System.out.println("file with no parent : skip");
+				continue;
+			}
+
+			INode<com.google.api.services.drive.model.File> node=null ;
+			
+			if (nodesMap.containsKey(f.getId())){
+				node = nodesMap.get(f.getId());
+				node.setFile(f);
+			}else{
+				node = new GoogleINode();
+				node.setFile(f);
+				nodesMap.put(f.getId(), node);
+			}
+
+			
+
+			ParentReference parent = f.getParents().get(0);
+			INode<com.google.api.services.drive.model.File> parNode=null;
+			
+			if (nodesMap.containsKey(parent.getId())){ // if exist parent node
+				parNode = nodesMap.get(parent.getId());
+
+			}else {
+				parNode = new GoogleINode();
+				nodesMap.put(parent.getId(),parNode);	
+			}
+			
+			if (fileMap.get(parent.getId())!=null){
+				parNode.setFile(fileMap.get(parent.getId()));
+			}
+			
+			
+			if (parent.getIsRoot()){			
+				parNode.setRoot(true);
+				rootNode=parNode;
+			}
+			
+			node.setParent(parNode);
+			parNode.addChild(node);
+			parNode.setId(parent.getId());
+
+		}
+		
+	}
+	
+	
 	public void refresh(INode<com.google.api.services.drive.model.File> node) throws IOException{
 		com.google.api.services.drive.model.File a = drive.files().get(node.getFileStr()).execute();
 		node.setFile(a);
