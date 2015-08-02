@@ -34,29 +34,30 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 		super("Local FS");
 		rootPath=rp;
 		me =this;
-		
-	
-			store = (LocalFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
+
+
+		store = (LocalFileStore) ObjectStoreUtil.readIndex(FilenameUtils.concat(rootPath, fileDb));
 		if (store !=null){	
-			
+			store.setFileFs(this);
+			setNewIndex(false);
 			return;
 		}
-		
-		
-	
-		
-			System.out.println("Local FS start build index");
-			store= new LocalFileStore(this);
-			
-		
-		
-			if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), store)){
-				
-			}else{
-				
-			}
-		
-		
+
+
+
+
+		System.out.println("Local FS start build index");
+		store= new LocalFileStore(this);
+
+
+
+		if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), store)){
+
+		}else{
+
+		}
+
+
 	}
 
 	@Override
@@ -68,7 +69,22 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 
 	@Override
 	protected void sync(String path, SyncAction action) {
-		// TODO Auto-generated method stub
+		System.out.println("event:" + path  + " "+ action);
+		switch(action){
+		case Deleted:
+			store.deleteFile(path);
+			break;
+		case CreateIndex:
+			if (store.createNode(path)==null){
+				System.err.println("cannot create local node");
+			}else{
+				System.out.print("created local node");
+			}
+			return;
+		default:
+			break;
+		}
+
 
 	}
 
@@ -87,13 +103,13 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 	@Override
 	public void refresh(INode<File> node) {
 		// TODO Auto-generated method stub
-		
+		this.store.refresh(node);
 	}
 
 	@Override
 	protected void refreshIndex() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -102,8 +118,36 @@ public class LocalFileSystem extends AbstractFileSystem<File>{
 		setInitflag(false);
 	}
 
+	@Override
+	protected boolean isDirty() {
+		// TODO Auto-generated method stub
+		return this.store.isDirty();
+	}
 
 	
+	
+	
+	@Override
+	protected void clearDirty() {
+		// TODO Auto-generated method stub
+		this.store.setDirty(false);
+	}
+
+	@Override
+	protected boolean saveStore() {
+		// TODO Auto-generated method stub
+
+		if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), store)){
+			System.out.println("save Index");
+			return true;
+		}else{
+			System.err.println("fail to save Index");
+			return false;
+		}
+	}
+
+
+
 
 
 }

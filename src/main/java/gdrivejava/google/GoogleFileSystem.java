@@ -2,13 +2,16 @@ package gdrivejava.google;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
+import org.mortbay.jetty.servlet.PathMap;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.sun.crypto.provider.ARCFOURCipher;
 
 import gdrivejava.auth.GoogleAuth;
 import gdrivejava.common.AbstractFileSystem;
@@ -43,6 +46,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 			if (mStore!=null){
 				mStore.setDrive(mDrive);
 				mStore.setGoogleFs(this);
+				setNewIndex(false);
 				return ;
 			}
 			System.out.println("Google FS start build index");
@@ -85,17 +89,31 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 
 	@Override
 	protected void sync(String path, SyncAction action) throws Exception {
-		// TODO Auto-generated method stub
+	
 		System.out.println("event:" + path  + " "+ action);
 		switch(action){
 		case Pull:
-			mStore.downloadFile(path);
+			try{
+				
+				mStore.downloadFile(path);
+				SyncEvent e = new SyncEvent();
+				e.setAction(SyncAction.CreateIndex);
+				e.setPath(path);
+				this.publishSyncEvent(e);
+
+			}catch (Exception e){
+				e.printStackTrace();
+				throw e;
+			}
 			break;
 		case Push:
 			mStore.uploadFile(path);
 			break;
 		case Update:
 			mStore.updateFile(path);
+			break;
+		case RemoveIndex:
+			mStore.deleteIndex(path);
 			break;
 		}
 	}
@@ -159,7 +177,7 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 	}
 
 
-
+	
 
 
 
@@ -175,6 +193,16 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 				e.setPath(p);
 				this.publishSyncEvent(e);
 			}
+			List<INode<com.google.api.services.drive.model.File>> removed =new ArrayList<>(); 
+			this.mStore.getChanges(removed,null);
+			for (INode<com.google.api.services.drive.model.File> p :removed){
+				SyncEvent e = new SyncEvent();
+				e.setAction(SyncAction.Deleted);
+				e.setPath(p.getFullPathName());
+				e.setNode(p);
+				this.publishSyncEvent(e);
+			}
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -191,6 +219,46 @@ public class GoogleFileSystem extends AbstractFileSystem<File> {
 	public void startIndependentSync() {
 		// TODO Auto-generated method stub
 		setInitflag(false);
+	}
+
+
+
+
+
+
+	@Override
+	protected boolean isDirty() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
+
+
+
+
+	@Override
+	protected void clearDirty() {
+		// TODO Auto-generated method stub
+		mStore.setDirty(false);
+	}
+
+
+
+
+
+
+	@Override
+	protected boolean saveStore() {
+		// TODO Auto-generated method stub
+		
+		if (ObjectStoreUtil.saveIndex(FilenameUtils.concat(rootPath, fileDb), mStore)){
+			System.out.println("save Index");
+			return true;
+		}else{
+			System.err.println("fail to save Index");
+			return false;
+		}
 	}
 
 

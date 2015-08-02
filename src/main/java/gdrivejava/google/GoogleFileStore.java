@@ -7,12 +7,9 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.management.RuntimeErrorException;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -23,7 +20,9 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.Drive.Changes;
 import com.google.api.services.drive.Drive.Files;
+import com.google.api.services.drive.model.Change;
 import com.google.api.services.drive.model.ChangeList;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.ParentReference;
@@ -45,12 +44,25 @@ public class GoogleFileStore implements Serializable{
 	final static String FOLDER_MIME="application/vnd.google-apps.folder";
 	final static String FILE_MIME="application/vnd.google-apps.file";
 	long lastModifiedTime=0;
+	long lastChangedTime=0;
 	long largestChangedId = 0;
 	INode<com.google.api.services.drive.model.File> rootNode =null;
-	
+	transient boolean dirty =false;
 
 	
 	
+
+
+	public boolean isDirty() {
+		return dirty;
+	}
+
+
+
+	public void setDirty(boolean dirty) {
+		this.dirty = dirty;
+	}
+
 
 
 	transient Drive drive = null;
@@ -137,7 +149,7 @@ public class GoogleFileStore implements Serializable{
 
 
 
-	public void uploadFile(String path){
+	public void uploadFile(String path) throws Exception{
 		//
 		File file =new File(this.googleFs.getRootPath()+path);
 		if (!file.exists()){
@@ -171,13 +183,16 @@ public class GoogleFileStore implements Serializable{
 					temp.setFile(created);
 					pathMap.put(temp.getFullPathName(),temp);
 					parNode.addChild(temp);
+					setDirty(true);
 					
 				}else{
 					System.out.println(" upload === null"+ file.getName());
+					throw new Exception("cannot upload");
 				}
 
 			}else{
 				System.out.println("parent Folder cannnot be created");
+				throw new Exception("cannot upload");
 
 			}
 
@@ -201,6 +216,7 @@ public class GoogleFileStore implements Serializable{
 				try {
 					com.google.api.services.drive.model.File updatedFile = drive.files().update(remoteNode.getId(), remoteNode.getFile(),mediaContent).execute();
 					remoteNode.setFile(updatedFile);
+					setDirty(true);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -259,11 +275,13 @@ public class GoogleFileStore implements Serializable{
 
 	public void downloadFile(String path) throws Exception{
 		INode<com.google.api.services.drive.model.File> node =pathMap.get(path);
+		refresh(node);
 		com.google.api.services.drive.model.File f  = node.getFile();
 		///	String downloadUrl = f.getDownloadUrl();
 		String surl = f.getDownloadUrl();
-		File output = new File(DriveMain.LocationPath + path);
+		File output = new File(FilenameUtils.concat(DriveMain.LocationPath , path));
 
+		System.out.println(FilenameUtils.concat(DriveMain.LocationPath , path));
 		if (f.getDownloadUrl() != null && f.getDownloadUrl().length() > 0) {
 			try 
 			{
@@ -361,6 +379,7 @@ public class GoogleFileStore implements Serializable{
 			try {
 				pathMap.put(node.getFullPathName(),  node);
 				pathList.add(node.getFullPathName());
+				setDirty(true);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -369,16 +388,53 @@ public class GoogleFileStore implements Serializable{
 		return pathList;
 	}
 
-	public List<String> getDeletedOrTrashed() throws IOException{
-		DateTime date = new DateTime (lastModifiedTime);
+	public void getChanges(List<INode<com.google.api.services.drive.model.File>> removed,List<INode<com.google.api.services.drive.model.File>> recovered ) throws IOException{
+		
+		List<Change> result = new ArrayList<Change>();
+	    Changes.List request = drive.changes().list();
+
+	    
+	    request.setStartChangeId(largestChangedId);
+	    long tlarget =	largestChangedId;
+	    do {
+	      try {
+	        ChangeList changes = request.execute();
+	        tlarget= changes.getLargestChangeId();
+	        result.addAll(changes.getItems());
+	        request.setPageToken(changes.getNextPageToken());
+	      } catch (IOException e) {
+	        System.out.println("An error occurred: " + e);
+	        request.setPageToken(null);
+	      }
+	    } while (request.getPageToken() != null &&
+	             request.getPageToken().length() > 0);
+
+	    for ( Change change : result){
+	    	long time =change.getModificationDate().getValue();
+	    	if (time > lastChangedTime){
+		    	if (change.getDeleted()|| change.getFile().getLabels().getTrashed()){
 	
-		return null;
+		    		 INode<com.google.api.services.drive.model.File> node = nodesMap.get(change.getFileId());
+		    		
+		    		 removed.add(node);
+		    		 nodesMap.remove(node.getId());
+		    		 pathMap.remove(node.getFullPathName());
+		    		 setDirty(true);
+	
+		    	}
+		    	lastChangedTime =time;
+	    	}
+	    	
+	    }
+	    largestChangedId=tlarget;
+	  
 	}
 
 	
 	public void setLargeChangeId(){
 		
-		com.google.api.services.drive.Drive.Changes.List request=null;;
+		com.google.api.services.drive.Drive.Changes.List request=null;
+		
 		try {
 			request = drive.changes().list().setIncludeDeleted(true);
 		} catch (IOException e1) {
@@ -389,7 +445,7 @@ public class GoogleFileStore implements Serializable{
 			
 			return ;
 		}
-		
+		request.setStartChangeId(999999999l);
 		
 		ChangeList changes;
 		try {
@@ -408,7 +464,7 @@ public class GoogleFileStore implements Serializable{
 	
 	List<com.google.api.services.drive.model.File> listFiles(String query) throws IOException{
 		List<com.google.api.services.drive.model.File> result = new ArrayList<com.google.api.services.drive.model.File>();
-		Files.List request = drive.files().list().set("corpus", "DOMAIN").setQ(query);
+		Files.List request = drive.files().list().setQ(query);
 		
 		do {
 
@@ -483,10 +539,20 @@ public class GoogleFileStore implements Serializable{
 	
 	
 	public void refresh(INode<com.google.api.services.drive.model.File> node) throws IOException{
-		com.google.api.services.drive.model.File a = drive.files().get(node.getFileStr()).execute();
+		com.google.api.services.drive.model.File a = drive.files().get(node.getId()).execute();
 		node.setFile(a);
-
+		setDirty(true);
 
 	}
+
+
+
+	public void deleteIndex(String path) {
+		pathMap.remove(path);
+		
+	}
+
+
+
 
 }

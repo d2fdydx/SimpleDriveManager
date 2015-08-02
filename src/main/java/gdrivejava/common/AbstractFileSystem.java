@@ -16,6 +16,14 @@ public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 	protected List<SyncEventListener> listeners = new ArrayList<>();
 	private boolean runningflag=true;
 	private boolean initflag=true;
+	boolean newIndex=true;
+	
+	public boolean isNewIndex() {
+		return newIndex;
+	}
+	public void setNewIndex(boolean newIndex) {
+		this.newIndex = newIndex;
+	}
 	public boolean isInitflag() {
 		return initflag;
 	}
@@ -25,6 +33,9 @@ public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 	abstract protected void sync(String path, SyncAction action) throws Exception;
 	abstract protected String getIndexName();
 	abstract protected Serializable getStore();
+	abstract protected boolean isDirty();
+	abstract protected void clearDirty();
+	abstract protected boolean saveStore() ;
 	protected AbstractFileSystem<F> me ;
 
 	public AbstractFileSystem(String name) {
@@ -147,7 +158,15 @@ public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 
 					//
 					System.out.println(me.thread.toString());
-
+					if (!initflag){
+					if (isDirty()){
+						if (saveStore()){
+							clearDirty();
+						}else{
+							
+						}
+					}
+					}
 					synchronized (me) {
 						if (thread.isInterrupted()){
 
@@ -166,6 +185,7 @@ public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 
 							return;
 						}
+						
 					}
 
 				}
@@ -193,4 +213,7 @@ public abstract class AbstractFileSystem<F> implements FileSystem<F> {
 
 		}
 	}
+	
+	
+	
 }

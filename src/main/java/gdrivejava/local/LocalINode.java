@@ -26,7 +26,10 @@ public class LocalINode extends INode<File>{
 				e.printStackTrace();
 				this.checkSum = "";
 			}
+		}else{
+			setDir(true);
 		}
+		this.file=null;
 	}
 
 	protected String getMd5CheckSum() throws Exception {

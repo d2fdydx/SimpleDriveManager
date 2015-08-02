@@ -29,6 +29,7 @@ public class GoogleINode extends INode<File>{
 			this.setDir(true);
 		this.setLastModifiedTime(file.getModifiedDate().getValue());
 		this.checkSum = file.getMd5Checksum();
+		
 	}
 	
 	

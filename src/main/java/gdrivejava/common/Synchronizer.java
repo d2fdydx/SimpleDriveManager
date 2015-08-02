@@ -81,6 +81,7 @@ public class Synchronizer {
 			localFs.addEventListener(new LocalListener(remoteFs, localFs));
 			remoteFs.addEventListener(new RemoteListener(remoteFs, localFs));
 
+			if (localFs.isNewIndex() || remoteFs.isNewIndex()){
 
 				
 				List<SyncEvent> remoteEvents = new ArrayList<>();
@@ -124,12 +125,7 @@ public class Synchronizer {
 						localTime = localNode.getLastModifiedTime();
 						
 						INode<Object> remoteNode = remoteMap.get(remotePath);
-						if (remoteNode.getCheckSum() ==null ){
-							System.out.println("remote: " + remotePath);
-						}
-						if (localNode.getCheckSum()==null){
-							System.out.println("local: " + remotePath);
-						}
+
 						
 						
 						if (remoteNode.isDir())
@@ -186,6 +182,7 @@ public class Synchronizer {
 				}
 				remoteFs.addSyncEvent(remoteEvents);
 				localFs.addSyncEvent(localEvents);
+			}
 			remoteFs.startIndependentSync();
 			localFs.startIndependentSync();
 		}
@@ -229,22 +226,52 @@ public class Synchronizer {
 		@Override
 		public void handle(SyncEvent event) {
 			// TODO Auto-generated method stub
+			INode<?> rf = remoteMap.get(event.getPath()),
+					lf = localMap.get(event.getPath());
 			switch(event.getAction()){
 			case Pull:
-				INode<?> rf = remoteMap.get(event.getPath()),
-					lf = localMap.get(event.getPath());
-				if (lf ==null)
+				
+				if (lf ==null){
 					remoteFs.addSyncEvent(event);
+					return ;
+				}
+
 				//should check conflict ( by fs last modified time
 				//
 				//sth sth
 				//==================
+
 				if (!rf.getCheckSum().equals(lf.getCheckSum())){
 					remoteFs.addSyncEvent(event);
 				}
 				
 				
 				break;
+				
+				
+			case Deleted:
+				rf = event.getNode();
+				if (lf !=null && rf !=null){
+					localFs.refresh((INode<File>) lf);
+					if (lf.getCheckSum()==null){
+						localFs.addSyncEvent(event);
+					}
+					
+					
+					if (lf.checkSum.equals(rf.checkSum)){
+						localFs.addSyncEvent(event);
+						
+					}else {
+						//conflict
+						System.out.println("delete conflict -> rename "+event.getPath());
+						event.setAction(SyncAction.Rename);
+					}
+					
+				}
+				
+				break;
+			case CreateIndex:
+				localFs.addSyncEvent(event);
 			default:
 				break;
 			}

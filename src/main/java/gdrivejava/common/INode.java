@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 
@@ -74,7 +75,7 @@ public abstract class INode<E> implements Serializable {
 	
 
 		this.file = file;
-		this.fileStr = file.toString();
+		
 	}
 	public void setId(String id) {
 		Id = id;
@@ -89,25 +90,13 @@ public abstract class INode<E> implements Serializable {
 	public String getFullPathName() {
 
 		if (parent !=null){
-			if (!parent.isRoot()){
-				
-				if (file !=null){
-					//parent.getFullPathName()+"/"+getName();
-					fullPathName=parent.getFullPathName()+"/"+"noName";
-					return parent.getFullPathName()+"/"+getName();
-				}				
-				return fullPathName;
-			}else{
-				
-				if (file!=null){
-					fullPathName = parent.getFullPathName()+getName();
-					return parent.getFullPathName()+getName();
-				}
-				return fullPathName;
-			}
-		
+			if (fullPathName==null)
+				fullPathName=FilenameUtils.concat(parent.getFullPathName(),getName());
+			return fullPathName;		
 		}
-		return "/";
+		if (isRoot())
+			return "";
+		else throw new RuntimeException("No parent and not root");
 	}
 	
 
@@ -123,6 +112,7 @@ public abstract class INode<E> implements Serializable {
 		return parent;
 	}
 	public void setParent(INode<E> parent) {
+		
 		this.parent = parent;
 	}
 

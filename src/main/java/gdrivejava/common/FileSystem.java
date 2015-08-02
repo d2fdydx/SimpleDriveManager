@@ -20,5 +20,5 @@ public interface FileSystem<F> {
 	public void criticalDestory();
 	public void join();
 	public void refresh(INode<F> node);
-	
+	public boolean isNewIndex();
 }
